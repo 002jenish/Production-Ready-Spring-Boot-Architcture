@@ -21,7 +21,7 @@ const STEPS = [
 
 const DEFAULT_STATE: WizardState = {
   projectName: "inventory-service",
-  groupId: "com.jenish",
+  groupId: "com.java",
   artifactId: "inventory-service",
   javaVersion: "21",
   springBootVersion: "3.5.3",

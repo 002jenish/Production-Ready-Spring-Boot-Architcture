@@ -49,7 +49,7 @@ export function ProjectInfoStep({ data, onNext, onChange }: ProjectInfoStepProps
     resolver: zodResolver(projectInfoSchema),
     defaultValues: {
       projectName: data.projectName || "inventory-service",
-      groupId: data.groupId || "com.jenish",
+      groupId: data.groupId || "com.java",
       artifactId: data.artifactId || "inventory-service",
       javaVersion: data.javaVersion || "21",
       springBootVersion: data.springBootVersion || "3.5.3",
