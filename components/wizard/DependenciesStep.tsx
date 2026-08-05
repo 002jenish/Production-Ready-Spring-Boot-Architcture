@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { DEPENDENCIES } from "@/lib/constants";
 import { DependencyId, WizardState } from "@/lib/types";
-import { ArrowLeft, Check, Lock, Boxes, Sparkles, AlertCircle } from "lucide-react";
+import { ArrowLeft, Check, Lock, Boxes, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface DependenciesStepProps {
@@ -12,15 +12,16 @@ interface DependenciesStepProps {
   onSubmit: (deps: string[]) => void;
   onBack: () => void;
   isGenerating: boolean;
+  onChange?: (data: Partial<WizardState>) => void;
 }
 
 const ALWAYS_INCLUDED: DependencyId[] = ["web", "lombok"];
 
 const CATEGORY_META: Record<string, { label: string; badge: string }> = {
-  core: { label: "Core Web & Data", badge: "border-blue-500/30 text-blue-400 bg-blue-500/10" },
-  security: { label: "Security & Auth", badge: "border-violet-500/30 text-violet-400 bg-violet-500/10" },
-  database: { label: "SQL & NoSQL Databases", badge: "border-emerald-500/30 text-emerald-400 bg-emerald-500/10" },
-  devtools: { label: "DevOps & Tooling", badge: "border-amber-500/30 text-amber-400 bg-amber-500/10" },
+  core: { label: "Core Web & Data", badge: "border-blue-500/30 text-blue-700 dark:text-blue-400 bg-blue-500/10" },
+  security: { label: "Security & Auth", badge: "border-violet-500/30 text-violet-700 dark:text-violet-400 bg-violet-500/10" },
+  database: { label: "SQL & NoSQL Databases", badge: "border-emerald-500/30 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10" },
+  devtools: { label: "DevOps & Tooling", badge: "border-amber-500/30 text-amber-700 dark:text-amber-400 bg-amber-500/10" },
 };
 
 export function DependenciesStep({
@@ -28,6 +29,7 @@ export function DependenciesStep({
   onSubmit,
   onBack,
   isGenerating,
+  onChange,
 }: DependenciesStepProps) {
   const [selected, setSelected] = useState<Set<string>>(
     new Set([...ALWAYS_INCLUDED, ...(data.dependencies || [])])
@@ -60,6 +62,8 @@ export function DependenciesStep({
           next.add(id);
         }
       }
+      // Immediately propagate to parent so FolderPreview updates live
+      onChange?.({ dependencies: Array.from(next) });
       return next;
     });
   };
@@ -77,14 +81,14 @@ export function DependenciesStep({
       <div>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Boxes className="w-5 h-5 text-blue-400" />
-            <h2 className="text-2xl font-bold">Select Dependencies</h2>
+            <Boxes className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Select Dependencies</h2>
           </div>
-          <div className="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs font-mono font-semibold">
+          <div className="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-700 dark:text-blue-300 text-xs font-mono font-bold">
             {selected.size} Selected
           </div>
         </div>
-        <p className="text-muted-foreground text-sm mt-1">
+        <p className="text-slate-600 dark:text-muted-foreground text-sm mt-1">
           Pick features to include in your starter project. Core dependencies are included by default.
         </p>
       </div>
@@ -98,62 +102,66 @@ export function DependenciesStep({
           return (
             <div key={cat} className="space-y-3">
               <div className="flex items-center gap-2">
-                <span className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-1 rounded-md border ${meta.badge}`}>
+                <span className={cn("text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md border", meta.badge)}>
                   {meta.label}
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="grid sm:grid-cols-2 gap-3">
                 {deps.map((dep) => {
-                  const isAlways = ALWAYS_INCLUDED.includes(dep.id as DependencyId);
-                  const isSelected = selected.has(dep.id);
+                  const isChecked = selected.has(dep.id);
 
                   return (
-                    <motion.button
+                    <motion.div
                       key={dep.id}
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.98 }}
-                      type="button"
-                      onClick={() => toggle(dep.id as DependencyId, isAlways)}
+                      whileHover={{ scale: dep.alwaysIncluded ? 1 : 1.01 }}
+                      whileTap={{ scale: dep.alwaysIncluded ? 1 : 0.99 }}
+                      onClick={() => toggle(dep.id, dep.alwaysIncluded)}
                       className={cn(
-                        "text-left p-3.5 rounded-xl border glass-panel transition-all flex items-start justify-between gap-3",
-                        isAlways && "opacity-90 cursor-default border-emerald-500/30 bg-emerald-500/5",
-                        isSelected && !isAlways && "border-blue-500/50 bg-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.15)]",
-                        !isSelected && !isAlways && "border-white/10 hover:border-white/20"
+                        "p-4 rounded-2xl border glass-panel transition-all flex items-start justify-between gap-3 relative overflow-hidden select-none",
+                        dep.alwaysIncluded ? "cursor-default bg-slate-100/80 dark:bg-black/30 border-slate-200 dark:border-white/10 opacity-90" : "cursor-pointer",
+                        isChecked && !dep.alwaysIncluded
+                          ? "bg-blue-50/80 dark:bg-blue-500/10 border-blue-500 text-slate-900 dark:text-white shadow-sm dark:shadow-[0_0_20px_rgba(59,130,246,0.15)]"
+                          : !dep.alwaysIncluded && "border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 bg-white/70 dark:bg-black/30"
                       )}
                     >
                       <div className="flex items-start gap-3">
-                        <span className="text-xl shrink-0 mt-0.5">{dep.icon}</span>
+                        <span className="text-xl mt-0.5">{dep.icon}</span>
                         <div>
-                          <div className="font-semibold text-sm flex items-center gap-1.5">
-                            <span>{dep.label}</span>
-                            {isAlways && (
-                              <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm text-slate-900 dark:text-white">{dep.label}</span>
+                            {dep.alwaysIncluded && (
+                              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400 font-semibold">
                                 Required
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
+                          <p className="text-xs text-slate-600 dark:text-muted-foreground mt-0.5 leading-snug font-medium">
                             {dep.description}
                           </p>
                         </div>
                       </div>
 
-                      <div
-                        className={cn(
-                          "w-5 h-5 rounded-full flex items-center justify-center text-xs shrink-0 mt-0.5 transition-all border",
-                          isSelected
-                            ? "bg-blue-600 border-blue-500 text-white"
-                            : "border-white/20 bg-black/20 text-transparent"
-                        )}
-                      >
-                        {isAlways ? (
-                          <Lock className="w-3 h-3 text-emerald-400" />
+                      {/* Checkbox badge */}
+                      <div className="shrink-0 mt-0.5">
+                        {dep.alwaysIncluded ? (
+                          <div className="w-5 h-5 rounded-md bg-blue-500/20 border border-blue-400 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                            <Lock className="w-3 h-3" />
+                          </div>
                         ) : (
-                          <Check className="w-3 h-3" />
+                          <div
+                            className={cn(
+                              "w-5 h-5 rounded-md border flex items-center justify-center transition-all",
+                              isChecked
+                                ? "bg-blue-600 border-blue-500 text-white shadow-sm"
+                                : "border-slate-300 dark:border-white/20 bg-slate-100 dark:bg-black/20 text-transparent"
+                            )}
+                          >
+                            <Check className="w-3 h-3" />
+                          </div>
                         )}
                       </div>
-                    </motion.button>
+                    </motion.div>
                   );
                 })}
               </div>
@@ -162,23 +170,13 @@ export function DependenciesStep({
         })}
       </div>
 
-      {/* Info notice if JWT selected */}
-      {selected.has("jwt") && (
-        <div className="p-4 rounded-xl glass-panel border border-violet-500/30 bg-violet-500/10 flex items-start gap-3 text-xs text-violet-200">
-          <Sparkles className="w-4 h-4 text-violet-400 shrink-0 mt-0.5" />
-          <div>
-            <span className="font-semibold">JWT Authentication Enabled: </span>
-            ArchForge will automatically generate <code className="font-mono text-white bg-black/40 px-1.5 py-0.5 rounded">SecurityConfig.java</code>, <code className="font-mono text-white bg-black/40 px-1.5 py-0.5 rounded">JwtService.java</code>, <code className="font-mono text-white bg-black/40 px-1.5 py-0.5 rounded">JwtFilter.java</code>, and <code className="font-mono text-white bg-black/40 px-1.5 py-0.5 rounded">AuthController.java</code>.
-          </div>
-        </div>
-      )}
-
-      {/* Action Bar */}
-      <div className="flex justify-between items-center pt-4 border-t border-white/10">
+      {/* Action buttons */}
+      <div className="flex justify-between items-center pt-4 border-t border-slate-200 dark:border-white/10">
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl glass-panel text-sm font-semibold hover:bg-white/5 transition-all"
+          disabled={isGenerating}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl glass-panel text-sm font-semibold text-slate-700 dark:text-foreground hover:bg-slate-200/60 dark:hover:bg-white/5 transition-all disabled:opacity-50"
         >
           <ArrowLeft className="w-4 h-4" />
           Back
@@ -188,21 +186,16 @@ export function DependenciesStep({
           type="button"
           onClick={() => onSubmit(Array.from(selected))}
           disabled={isGenerating}
-          className={cn(
-            "flex items-center gap-2.5 px-8 py-3.5 rounded-xl text-white font-bold text-sm transition-all shadow-xl",
-            isGenerating
-              ? "bg-blue-600/50 cursor-not-allowed"
-              : "bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:scale-105 active:scale-95 glow-primary"
-          )}
+          className="flex items-center gap-2 px-7 py-3 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 text-white font-extrabold text-sm hover:brightness-110 transition-all shadow-xl glow-primary disabled:opacity-50 cursor-pointer"
         >
           {isGenerating ? (
             <>
-              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              <span>Generating Spring Boot ZIP...</span>
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              <span>Generating Spring Boot Starter...</span>
             </>
           ) : (
             <>
-              <Sparkles className="w-4 h-4 text-yellow-300 fill-current" />
+              <Sparkles className="w-4 h-4" />
               <span>Generate & Download ZIP</span>
             </>
           )}

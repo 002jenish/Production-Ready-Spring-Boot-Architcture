@@ -1,36 +1,142 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ArchForge 🔨
 
-## Getting Started
+> **Spring Boot Project Architecture Generator** — A lightweight Spring Initializr + JHipster hybrid focused on industry-standard backend scaffolding.
 
-First, run the development server:
+---
+
+## 🚀 What It Does
+
+ArchForge generates production-ready Spring Boot starter projects via a beautiful 3-step visual wizard. Select your architecture pattern and dependencies, then download a compilable ZIP in under 2 seconds.
+
+### Features
+
+- **4 Architecture Patterns**: Layered, Hexagonal (Ports & Adapters), Clean Architecture, Modular Monolith
+- **18+ Dependencies**: JWT Security, Spring Data JPA, PostgreSQL, MySQL, MongoDB, Flyway, Actuator, OpenAPI, Docker, GitHub Actions CI
+- **Real-time Preview**: Live file tree updates as you configure
+- **Dark/Light Theme**: Glassmorphism design with animated accents
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend & API | Next.js 15 (App Router) + TypeScript |
+| Styling | TailwindCSS v4 + shadcn/ui |
+| Form Validation | React Hook Form + Zod |
+| ZIP Generation | JSZip (server-side in API routes) |
+| Deployment | Single Next.js deployment (Vercel / Railway / Docker) |
+
+---
+
+## 📦 Local Development
+
+### Prerequisites
+
+- Node.js 20+
+- npm 10+
+
+### Run
 
 ```bash
+# 1. Clone the repo
+cd "frontend"
+
+# 2. Install dependencies
+npm install
+
+# 3. Start dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🐳 Docker (Generator App)
 
-## Learn More
+Run the ArchForge generator itself with Docker:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+# From the root directory
+docker compose up --build
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Open [http://localhost:3000](http://localhost:3000)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 📁 Project Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+archforge/
+├── frontend/                    ← Next.js 15 App (UI + API)
+│   ├── app/
+│   │   ├── page.tsx             ← Landing page
+│   │   ├── generate/page.tsx    ← 3-step wizard
+│   │   └── api/generate/        ← ZIP generation API route
+│   ├── components/
+│   │   ├── wizard/              ← Step components
+│   │   └── preview/             ← FolderPreview
+│   └── lib/
+│       ├── templates/           ← All code generation logic
+│       │   ├── zip-generator.ts ← Main orchestrator
+│       │   ├── pom-generator.ts ← pom.xml
+│       │   ├── yml-generator.ts ← application.yml
+│       │   ├── security-generator.ts ← JWT classes
+│       │   ├── source-generator.ts   ← Java source files
+│       │   └── devops-generator.ts   ← Docker / CI
+│       ├── schema.ts            ← Zod validation schemas
+│       ├── types.ts             ← TypeScript types
+│       └── constants.ts         ← Dependency & arch definitions
+└── README.md                    ← This file
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 🔌 API
+
+### POST `/api/generate`
+
+**Request Body:**
+```json
+{
+  "projectName": "inventory-service",
+  "groupId": "com.java",
+  "artifactId": "inventory-service",
+  "javaVersion": "21",
+  "springBootVersion": "3.5.3",
+  "architecture": "layered",
+  "dependencies": ["web", "jpa", "security", "jwt", "postgresql", "swagger", "docker", "flyway"]
+}
+```
+
+**Response:** `application/zip` binary stream
+
+---
+
+## 📋 Generated Project
+
+The downloaded ZIP is immediately compilable:
+
+```bash
+cd my-project
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+```
+
+Generated files include:
+- ✅ `pom.xml` with all selected dependencies
+- ✅ Multi-profile `application.yml` (main / dev / prod)
+- ✅ JWT Security classes (if selected)
+- ✅ Multi-stage `Dockerfile` (if selected)
+- ✅ `docker-compose.yml` with DB service (if selected)
+- ✅ GitHub Actions CI workflow (if selected)
+- ✅ Flyway migration `V1__init.sql` (if selected)
+- ✅ Global exception handler
+- ✅ README + `.gitignore` + Maven wrapper
+
+---
+
+## 📄 License
+
+MIT License — Use freely, contribute back!

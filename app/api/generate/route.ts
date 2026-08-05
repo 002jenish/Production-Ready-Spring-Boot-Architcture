@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     // Generate the ZIP
     const zipBuffer = await generateZip(req);
 
-    const filename = `${req.artifactId}-archforge.zip`;
+    const filename = `${req.artifactId}.zip`;
 
     return new NextResponse(new Uint8Array(zipBuffer), {
       status: 200,

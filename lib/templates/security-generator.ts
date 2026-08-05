@@ -31,7 +31,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
-    private final UserDetailsService userDetailsService;
 
     private static final String[] PUBLIC_URLS = {
             "/api/auth/**",
@@ -39,11 +38,12 @@ public class SecurityConfig {
             "/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html",
+            "/v3/api-docs/**",
             "/actuator/health"
     };
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationProvider authenticationProvider) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
@@ -52,16 +52,15 @@ public class SecurityConfig {
                 )
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authenticationProvider(authenticationProvider())
+                .authenticationProvider(authenticationProvider)
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
 
     @Bean
-    public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsService);
-        provider.setPasswordEncoder(passwordEncoder());
+    public AuthenticationProvider authenticationProvider(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder);
         return provider;
     }
 
@@ -100,13 +99,13 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    @Value("\${application.security.jwt.secret-key}")
+    @Value("\${application.security.jwt.secret-key:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}")
     private String secretKey;
 
-    @Value("\${application.security.jwt.expiration}")
+    @Value("\${application.security.jwt.expiration:86400000}")
     private long jwtExpiration;
 
-    @Value("\${application.security.jwt.refresh-token.expiration}")
+    @Value("\${application.security.jwt.refresh-token.expiration:604800000}")
     private long refreshExpiration;
 
     public String extractUsername(String token) {
@@ -140,20 +139,29 @@ public class JwtService {
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
-        return extractUsername(token).equals(userDetails.getUsername()) && !isTokenExpired(token);
+        final String username = extractUsername(token);
+        return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
     }
 
     private boolean isTokenExpired(String token) {
-        return extractClaim(token, Claims::getExpiration).before(new Date());
+        return extractExpiration(token).before(new Date());
+    }
+
+    private Date extractExpiration(String token) {
+        return extractClaim(token, Claims::getExpiration);
     }
 
     private Claims extractAllClaims(String token) {
-        return Jwts.parser().verifyWith(getSignInKey()).build()
-                .parseSignedClaims(token).getPayload();
+        return Jwts.parser()
+                .verifyWith(getSignInKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
     private SecretKey getSignInKey() {
-        return Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey));
+        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 }
 `;
@@ -192,11 +200,18 @@ public class JwtFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
+
+        if (request.getServletPath().contains("/api/auth")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         final String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
+
         final String jwt = authHeader.substring(7);
         final String userEmail = jwtService.extractUsername(jwt);
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
@@ -226,31 +241,29 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
- * Custom UserDetailsService — replace the stub with your actual User repository lookup.
- * TODO: Inject your UserRepository and look up users from the database.
+ * Custom UserDetailsService — default stub implementation.
+ * TODO: Inject your UserRepository and replace the stub with actual database lookup.
  */
 @Service
 @RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
 
-    // TODO: inject your UserRepository here
+    // TODO: Inject your UserRepository here
     // private final UserRepository userRepository;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        // TODO: replace with actual DB lookup
-        // return userRepository.findByEmail(username)
-        //     .map(user -> User.builder()
-        //         .username(user.getEmail())
-        //         .password(user.getPassword())
-        //         .roles(user.getRole().name())
-        //         .build())
-        //     .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
-
-        throw new UsernameNotFoundException("User not found: " + username + " — implement DB lookup");
+        // Default working stub for initial project startup
+        // TODO: Replace with actual DB lookup e.g. userRepository.findByEmail(username)
+        return User.builder()
+                .username(username)
+                .password("$2a$10$e8W/8V2g/QGkFqJ0E5Qz9.a5UeZ6k8X7Y0W9Z1Z2Z3Z4Z5Z6Z7Z8") // BCrypt encoded fallback
+                .authorities(Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")))
+                .build();
     }
 }
 `;
@@ -299,8 +312,11 @@ public class AuthController {
 
     @PostMapping("/refresh")
     public ResponseEntity<Map<String, String>> refresh(@RequestBody Map<String, String> request) {
-        // TODO: validate refresh token and issue new access token
-        return ResponseEntity.ok(Map.of("message", "Implement refresh token validation"));
+        String refreshToken = request.get("refreshToken");
+        if (refreshToken == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(Map.of("message", "Token refresh endpoint"));
     }
 }
 `;

@@ -4,11 +4,35 @@ import {
   hasMongo, hasMysql, hasOauth2, hasPostgres, hasSecurity, hasSwagger, hasExHandler
 } from "./utils";
 
+/**
+ * Normalize Spring Boot version string to Maven standard format.
+ * start.spring.io returns IDs like "4.1.1-SNAPSHOT" or "3.5.3"
+ * but older labels may contain ".BUILD-SNAPSHOT" or "(SNAPSHOT)".
+ * 
+ * Examples:
+ *   "4.1.1.BUILD-SNAPSHOT"  → "4.1.1-SNAPSHOT"
+ *   "4.1.1 (SNAPSHOT)"      → "4.1.1-SNAPSHOT"
+ *   "4.1.1(snapshot)"       → "4.1.1-SNAPSHOT"
+ *   "3.5.3"                 → "3.5.3"
+ *   "3.5.3-SNAPSHOT"        → "3.5.3-SNAPSHOT"  (already correct)
+ */
+function normalizeSpringVersion(raw: string): string {
+  // Remove trailing parenthetical snapshot qualifiers like " (SNAPSHOT)" or "(snapshot)"
+  let v = raw.replace(/\s*\(snapshot\)/gi, "-SNAPSHOT");
+  // Convert .BUILD-SNAPSHOT to -SNAPSHOT (legacy Spring format)
+  v = v.replace(/\.BUILD-SNAPSHOT$/i, "-SNAPSHOT");
+  // Ensure we don't double up
+  v = v.replace(/-SNAPSHOT-SNAPSHOT$/i, "-SNAPSHOT");
+  return v.trim();
+}
+
 export function generatePomXml(req: GenerateRequest): string {
+  const springVersion = normalizeSpringVersion(req.springBootVersion);
   const jwtBlock = hasJwt(req)
     ? `        <jjwt.version>0.12.6</jjwt.version>\n` : "";
   const springdocBlock = hasSwagger(req)
     ? `        <springdoc.version>2.8.9</springdoc.version>\n` : "";
+
 
   const jpaBlock = hasJpa(req) && !hasMongo(req) ? `
         <!-- Spring Data JPA -->
@@ -121,7 +145,7 @@ export function generatePomXml(req: GenerateRequest): string {
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>${req.springBootVersion}</version>
+        <version>${springVersion}</version>
         <relativePath/>
     </parent>
 

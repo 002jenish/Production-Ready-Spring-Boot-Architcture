@@ -108,9 +108,8 @@ export function ProjectInfoStep({ data, onNext, onChange }: ProjectInfoStepProps
   const onSubmit = (values: ProjectInfoFormData) => {
     onNext(values);
   };
-
   const inputStyle =
-    "w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-sm font-mono placeholder:text-muted-foreground/40 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all";
+    "w-full px-4 py-3 rounded-xl bg-slate-100/80 dark:bg-black/40 border border-slate-300 dark:border-white/10 text-slate-900 dark:text-slate-100 text-sm font-mono placeholder:text-slate-400 dark:placeholder:text-muted-foreground/40 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all";
 
   return (
     <motion.form
@@ -124,17 +123,17 @@ export function ProjectInfoStep({ data, onNext, onChange }: ProjectInfoStepProps
       <div>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 mb-1">
-            <FolderGit2 className="w-5 h-5 text-blue-400" />
-            <h2 className="text-2xl font-bold">Project Information</h2>
+            <FolderGit2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Project Information</h2>
           </div>
           {versionSource === "spring-initializr-api" && (
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-emerald-400" />
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-medium">
+              <Sparkles className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
               Live Releases API
             </span>
           )}
         </div>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-slate-600 dark:text-muted-foreground text-sm">
           Define core metadata, Java SDK runtime, and official Spring Boot release.
         </p>
       </div>
@@ -142,8 +141,8 @@ export function ProjectInfoStep({ data, onNext, onChange }: ProjectInfoStepProps
       <div className="grid gap-5">
         {/* Project Name */}
         <div>
-          <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-            Project Name <span className="text-blue-400">*</span>
+          <label className="block text-xs font-semibold text-slate-700 dark:text-muted-foreground uppercase tracking-wider mb-2">
+            Project Name <span className="text-blue-600 dark:text-blue-400">*</span>
           </label>
           <input
             {...register("projectName")}
@@ -160,8 +159,8 @@ export function ProjectInfoStep({ data, onNext, onChange }: ProjectInfoStepProps
         {/* Group ID & Artifact ID */}
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              Group ID <span className="text-blue-400">*</span>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-muted-foreground uppercase tracking-wider mb-2">
+              Group ID <span className="text-blue-600 dark:text-blue-400">*</span>
             </label>
             <input
               {...register("groupId")}
@@ -172,8 +171,8 @@ export function ProjectInfoStep({ data, onNext, onChange }: ProjectInfoStepProps
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              Artifact ID <span className="text-blue-400">*</span>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-muted-foreground uppercase tracking-wider mb-2">
+              Artifact ID <span className="text-blue-600 dark:text-blue-400">*</span>
             </label>
             <input
               {...register("artifactId")}
@@ -186,8 +185,8 @@ export function ProjectInfoStep({ data, onNext, onChange }: ProjectInfoStepProps
 
         {/* Java Version Selector */}
         <div>
-          <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-            Java Version SDK <span className="text-blue-400">*</span>
+          <label className="block text-xs font-semibold text-slate-700 dark:text-muted-foreground uppercase tracking-wider mb-2">
+            Java Version SDK <span className="text-blue-600 dark:text-blue-400">*</span>
           </label>
           <div className="grid grid-cols-2 gap-3">
             {JAVA_VERSIONS.map((ver) => (
@@ -195,8 +194,8 @@ export function ProjectInfoStep({ data, onNext, onChange }: ProjectInfoStepProps
                 key={ver}
                 className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border cursor-pointer font-mono text-sm font-semibold transition-all ${
                   watch("javaVersion") === ver
-                    ? "bg-blue-600/20 border-blue-500 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-                    : "bg-black/30 border-white/10 text-muted-foreground hover:border-white/20"
+                    ? "bg-blue-50 dark:bg-blue-600/20 border-blue-500 text-blue-700 dark:text-blue-400 shadow-sm dark:shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+                    : "bg-slate-100/60 dark:bg-black/30 border-slate-300 dark:border-white/10 text-slate-700 dark:text-muted-foreground hover:border-slate-400 dark:hover:border-white/20"
                 }`}
               >
                 <input
@@ -215,11 +214,11 @@ export function ProjectInfoStep({ data, onNext, onChange }: ProjectInfoStepProps
         {/* Spring Boot Version (Fetched Live from Spring Initializr API) */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Spring Boot Release <span className="text-blue-400">*</span>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-muted-foreground uppercase tracking-wider">
+              Spring Boot Release <span className="text-blue-600 dark:text-blue-400">*</span>
             </label>
             {isLoadingVersions && (
-              <span className="text-[10px] font-mono text-blue-400 flex items-center gap-1">
+              <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400 flex items-center gap-1">
                 <RefreshCw className="w-3 h-3 animate-spin" />
                 Fetching official releases...
               </span>
@@ -227,7 +226,7 @@ export function ProjectInfoStep({ data, onNext, onChange }: ProjectInfoStepProps
           </div>
           <select {...register("springBootVersion")} className={inputStyle}>
             {springVersions.map((v) => (
-              <option key={v.version} value={v.version} className="bg-slate-900 text-white">
+              <option key={v.version} value={v.version} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
                 {v.label} {v.isDefault ? "(Recommended)" : ""}
               </option>
             ))}
@@ -236,18 +235,18 @@ export function ProjectInfoStep({ data, onNext, onChange }: ProjectInfoStepProps
         </div>
 
         {/* Dynamic Package Hint */}
-        <div className="p-4 rounded-xl glass-panel border border-blue-500/20 flex items-start gap-3 bg-blue-500/5">
-          <Terminal className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-          <div className="text-xs text-slate-300">
-            <span className="font-semibold text-blue-300">Base Java Package: </span>
-            <code className="font-mono text-cyan-300 bg-black/40 px-2 py-0.5 rounded">
+        <div className="p-4 rounded-xl glass-panel border border-blue-500/30 flex items-start gap-3 bg-blue-50/50 dark:bg-blue-500/5">
+          <Terminal className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+          <div className="text-xs text-slate-700 dark:text-slate-300">
+            <span className="font-semibold text-blue-700 dark:text-blue-300">Base Java Package: </span>
+            <code className="font-mono text-blue-700 dark:text-cyan-300 bg-blue-100/80 dark:bg-black/40 px-2 py-0.5 rounded border border-blue-200 dark:border-transparent">
               {(watch("groupId") || "com.example")}.{(watch("artifactId") || "my-service").replace(/-/g, "")}
             </code>
           </div>
         </div>
       </div>
 
-      <div className="flex justify-end pt-4 border-t border-white/10">
+      <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-white/10">
         <button
           type="submit"
           className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-sm hover:brightness-110 transition-all shadow-lg glow-primary"

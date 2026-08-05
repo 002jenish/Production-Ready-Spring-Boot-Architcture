@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { StepSidebar } from "@/components/wizard/StepSidebar";
 import { ProjectInfoStep } from "@/components/wizard/ProjectInfoStep";
@@ -38,8 +38,13 @@ export default function GeneratePage() {
   const [wizardState, setWizardState] = useState<WizardState>(DEFAULT_STATE);
   const [status, setStatus] = useState<Status>("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const [mounted, setMounted] = useState(false);
   const [showMobilePreview, setShowMobilePreview] = useState(false);
   const { theme, setTheme } = useTheme();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const markComplete = (s: number) => {
     setCompletedSteps((prev) => (prev.includes(s) ? prev : [...prev, s]));
@@ -83,7 +88,7 @@ export default function GeneratePage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${finalState.artifactId}-archforge.zip`;
+      a.download = `${finalState.artifactId}.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -102,17 +107,17 @@ export default function GeneratePage() {
   return (
     <div className="min-h-screen bg-mesh text-foreground flex flex-col relative overflow-hidden">
       {/* Top Navigation Bar */}
-      <header className="h-16 glass-panel border-b border-white/10 flex items-center justify-between px-6 shrink-0 z-30">
+      <header className="h-16 glass-panel border-b border-slate-200 dark:border-white/10 flex items-center justify-between px-6 shrink-0 z-30">
         <div className="flex items-center gap-4">
           <Link
             href="/"
-            className="flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-muted-foreground hover:text-slate-900 dark:hover:text-foreground transition-colors"
           >
             <Home className="w-4 h-4" />
             <span className="hidden sm:inline">Back to Home</span>
           </Link>
 
-          <div className="h-4 w-px bg-white/10 hidden sm:block" />
+          <div className="h-4 w-px bg-slate-300 dark:bg-white/10 hidden sm:block" />
 
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white text-xs font-black shadow">
@@ -126,7 +131,7 @@ export default function GeneratePage() {
 
         {/* Center Progress Bar */}
         <div className="hidden md:flex items-center gap-3 w-64">
-          <div className="flex-1 h-2 rounded-full bg-black/40 border border-white/10 overflow-hidden">
+          <div className="flex-1 h-2 rounded-full bg-slate-200 dark:bg-black/40 border border-slate-300 dark:border-white/10 overflow-hidden">
             <motion.div
               className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500"
               initial={{ width: 0 }}
@@ -134,7 +139,7 @@ export default function GeneratePage() {
               transition={{ duration: 0.5 }}
             />
           </div>
-          <span className="text-xs font-mono font-bold text-blue-400">{progress}%</span>
+          <span className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400">{progress}%</span>
         </div>
 
         {/* Right Actions */}
@@ -142,7 +147,7 @@ export default function GeneratePage() {
           {/* Mobile Preview Toggle */}
           <button
             onClick={() => setShowMobilePreview(true)}
-            className="xl:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-panel text-xs font-semibold text-blue-400 hover:text-white transition-colors border border-blue-500/30"
+            className="xl:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-panel text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-white transition-colors border border-blue-500/30"
           >
             <Eye className="w-3.5 h-3.5" />
             <span>Tree Preview</span>
@@ -150,9 +155,16 @@ export default function GeneratePage() {
 
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="p-2 rounded-xl glass-panel hover:bg-white/5 transition-colors text-muted-foreground hover:text-foreground"
+            className="p-2 rounded-xl glass-panel hover:bg-slate-200/60 dark:hover:bg-white/5 transition-colors text-slate-600 dark:text-muted-foreground hover:text-slate-900 dark:hover:text-foreground"
+            aria-label="Toggle theme"
           >
-            {theme === "dark" ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-blue-400" />}
+            {!mounted ? (
+              <div className="w-4 h-4" />
+            ) : theme === "dark" ? (
+              <Sun className="w-4 h-4 text-amber-400" />
+            ) : (
+              <Moon className="w-4 h-4 text-blue-600" />
+            )}
           </button>
         </div>
       </header>
@@ -233,6 +245,7 @@ export default function GeneratePage() {
                   data={wizardState}
                   onNext={handleStep2Next}
                   onBack={() => setStep(1)}
+                  onChange={(partial) => setWizardState((prev) => ({ ...prev, ...partial }))}
                 />
               )}
               {step === 3 && (
@@ -242,6 +255,7 @@ export default function GeneratePage() {
                   onSubmit={handleGenerate}
                   onBack={() => setStep(2)}
                   isGenerating={status === "generating"}
+                  onChange={(partial) => setWizardState((prev) => ({ ...prev, ...partial }))}
                 />
               )}
             </AnimatePresence>
