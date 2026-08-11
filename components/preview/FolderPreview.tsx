@@ -12,9 +12,14 @@ import {
   FolderPlus,
   FilePlus,
   Edit2,
-  Trash2
+  Trash2,
+  Copy,
+  FileCode,
+  Download
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { generatePomXml } from "@/lib/templates/pom-generator";
+import { generateBuildGradle } from "@/lib/templates/gradle-generator";
 
 interface FolderPreviewProps {
   state: WizardState;
@@ -146,16 +151,16 @@ function buildBaseTree(state: WizardState): FolderNode {
           },
           ...(has("security")
             ? [
-                {
-                  name: "security",
-                  path: `${javaPkgPath}/security`,
-                  type: "folder" as const,
-                  children: [
-                    { name: "SecurityConfig.java", path: `${javaPkgPath}/security/SecurityConfig.java`, type: "file" as const },
-                    { name: "JwtService.java", path: `${javaPkgPath}/security/JwtService.java`, type: "file" as const },
-                  ],
-                },
-              ]
+              {
+                name: "security",
+                path: `${javaPkgPath}/security`,
+                type: "folder" as const,
+                children: [
+                  { name: "SecurityConfig.java", path: `${javaPkgPath}/security/SecurityConfig.java`, type: "file" as const },
+                  { name: "JwtService.java", path: `${javaPkgPath}/security/JwtService.java`, type: "file" as const },
+                ],
+              },
+            ]
             : []),
         ];
     }
@@ -171,10 +176,18 @@ function buildBaseTree(state: WizardState): FolderNode {
     path: state.artifactId || "inventory-service",
     type: "folder" as const,
     children: [
-      { name: "pom.xml", path: "pom.xml", type: "file" as const },
+      ...(state.buildTool === "gradle"
+        ? [
+          { name: "build.gradle", path: "build.gradle", type: "file" as const },
+          { name: "settings.gradle", path: "settings.gradle", type: "file" as const },
+          { name: "gradlew", path: "gradlew", type: "file" as const },
+        ]
+        : [
+          { name: "pom.xml", path: "pom.xml", type: "file" as const },
+          { name: "mvnw", path: "mvnw", type: "file" as const },
+        ]),
       { name: "README.md", path: "README.md", type: "file" as const },
       { name: ".gitignore", path: ".gitignore", type: "file" as const },
-      { name: "mvnw", path: "mvnw", type: "file" as const },
       {
         name: "src/main/java",
         path: javaPkgPath,
@@ -189,28 +202,199 @@ function buildBaseTree(state: WizardState): FolderNode {
         path: resPath,
         type: "folder" as const,
         children: [
-          { name: "application.yml", path: `${resPath}/application.yml`, type: "file" as const },
-          { name: "application-dev.yml", path: `${resPath}/application-dev.yml`, type: "file" as const },
+          {
+            name: state.configFormat === "properties" ? "application.properties" : "application.yml",
+            path: `${resPath}/${state.configFormat === "properties" ? "application.properties" : "application.yml"}`,
+            type: "file" as const,
+          },
+          {
+            name: state.configFormat === "properties" ? "application-dev.properties" : "application-dev.yml",
+            path: `${resPath}/${state.configFormat === "properties" ? "application-dev.properties" : "application-dev.yml"}`,
+            type: "file" as const,
+          },
+          {
+            name: state.configFormat === "properties" ? "application-prod.properties" : "application-prod.yml",
+            path: `${resPath}/${state.configFormat === "properties" ? "application-prod.properties" : "application-prod.yml"}`,
+            type: "file" as const,
+          },
           ...(has("flyway")
             ? [
-                {
-                  name: "db/migration",
-                  path: `${resPath}/db/migration`,
-                  type: "folder" as const,
-                  children: [{ name: "V1__init.sql", path: `${resPath}/db/migration/V1__init.sql`, type: "file" as const }],
-                },
-              ]
+              {
+                name: "db/migration",
+                path: `${resPath}/db/migration`,
+                type: "folder" as const,
+                children: [{ name: "V1__init.sql", path: `${resPath}/db/migration/V1__init.sql`, type: "file" as const }],
+              },
+            ]
             : []),
         ],
       },
       ...(has("docker")
         ? [
-            { name: "Dockerfile", path: "Dockerfile", type: "file" as const },
-            { name: "docker-compose.yml", path: "docker-compose.yml", type: "file" as const },
-          ]
+          { name: "Dockerfile", path: "Dockerfile", type: "file" as const },
+          { name: "docker-compose.yml", path: "docker-compose.yml", type: "file" as const },
+        ]
         : []),
     ],
   };
+}
+
+// Syntax Highlighting Helper for XML and Gradle
+function renderHighlightedLine(line: string, isGradle: boolean): React.ReactNode {
+  if (!line) return "\n";
+
+  // Comments
+  if (line.trim().startsWith("<!--") || line.trim().startsWith("//")) {
+    return <span className="text-slate-500 italic">{line}</span>;
+  }
+
+  if (isGradle) {
+    const isKeywordLine = /^(plugins|dependencies|java|repositories|configurations|tasks|toolchain)/.test(line.trim());
+    if (isKeywordLine) {
+      return <span className="text-pink-400 font-bold">{line}</span>;
+    }
+
+    const parts = line.split(/('[^']*')/g);
+    return (
+      <span>
+        {parts.map((part, i) => {
+          if (part.startsWith("'") && part.endsWith("'")) {
+            return <span key={i} className="text-emerald-300 font-mono">{part}</span>;
+          }
+          if (/\b(implementation|runtimeOnly|compileOnly|testImplementation|testRuntimeOnly|annotationProcessor|id|version|group|languageVersion)\b/.test(part)) {
+            return (
+              <span key={i}>
+                {part.split(/\b(implementation|runtimeOnly|compileOnly|testImplementation|testRuntimeOnly|annotationProcessor|id|version|group|languageVersion)\b/g).map((sub, j) =>
+                  /\b(implementation|runtimeOnly|compileOnly|testImplementation|testRuntimeOnly|annotationProcessor|id|version|group|languageVersion)\b/.test(sub) ? (
+                    <span key={j} className="text-violet-400 font-semibold">{sub}</span>
+                  ) : (
+                    sub
+                  )
+                )}
+              </span>
+            );
+          }
+          return <span key={i} className="text-slate-200">{part}</span>;
+        })}
+      </span>
+    );
+  }
+
+  // XML Syntax Highlighting
+  const parts = line.split(/(<[^>]+>)/g);
+  return (
+    <span>
+      {parts.map((part, i) => {
+        if (part.startsWith("<") && part.endsWith(">")) {
+          if (part.startsWith("<?") || part.startsWith("</")) {
+            const tagName = part.replace(/^<\/?\??/, "").replace(/\??>$/, "");
+            return (
+              <span key={i}>
+                <span className="text-cyan-500 font-mono font-bold">&lt;{part.startsWith("</") ? "/" : "?"}</span>
+                <span className="text-cyan-300 font-semibold">{tagName}</span>
+                <span className="text-cyan-500 font-mono font-bold">{part.startsWith("<?") ? "?" : ""}&gt;</span>
+              </span>
+            );
+          }
+
+          const tagMatch = part.match(/^<([a-zA-Z0-9_\-]+)([\s\S]*)>$/);
+          if (tagMatch) {
+            const [, tagName, attrs] = tagMatch;
+            return (
+              <span key={i}>
+                <span className="text-cyan-500 font-mono font-bold">&lt;</span>
+                <span className="text-cyan-300 font-semibold">{tagName}</span>
+                {attrs && (
+                  <span>
+                    {attrs.split(/(\s+[a-zA-Z0-9_\-:]+="[^"]*")/g).map((attrPart, k) => {
+                      const attrMatch = attrPart.match(/^(\s+)([a-zA-Z0-9_\-:]+)=(".*")$/);
+                      if (attrMatch) {
+                        return (
+                          <span key={k}>
+                            {attrMatch[1]}
+                            <span className="text-violet-300 font-semibold">{attrMatch[2]}</span>
+                            <span className="text-slate-400">=</span>
+                            <span className="text-emerald-300">{attrMatch[3]}</span>
+                          </span>
+                        );
+                      }
+                      return <span key={k} className="text-slate-300">{attrPart}</span>;
+                    })}
+                  </span>
+                )}
+                <span className="text-cyan-500 font-mono font-bold">&gt;</span>
+              </span>
+            );
+          }
+          return <span key={i} className="text-cyan-400 font-mono">{part}</span>;
+        }
+        return <span key={i} className="text-amber-200 font-medium">{part}</span>;
+      })}
+    </span>
+  );
+}
+
+// IDE Code Preview Container Component
+function CodePreviewContainer({ code, lang }: { code: string; lang: "xml" | "gradle" | "yaml" | "properties" | "java" }) {
+  const lines = useMemo(() => code.split("\n"), [code]);
+  const isGradle = lang === "gradle";
+
+  function renderLine(line: string): React.ReactNode {
+    if (!line) return "\n";
+    // YAML / .properties
+    if (lang === "yaml") {
+      if (line.trim().startsWith("#")) return <span className="text-slate-500 italic">{line}</span>;
+      const colonIdx = line.indexOf(":");
+      if (colonIdx > -1) {
+        const key = line.slice(0, colonIdx + 1);
+        const val = line.slice(colonIdx + 1);
+        return <span><span className="text-cyan-300 font-semibold">{key}</span><span className="text-amber-200">{val}</span></span>;
+      }
+      return <span className="text-slate-200">{line}</span>;
+    }
+    if (lang === "properties") {
+      if (line.trim().startsWith("#")) return <span className="text-slate-500 italic">{line}</span>;
+      const eqIdx = line.indexOf("=");
+      if (eqIdx > -1) {
+        const key = line.slice(0, eqIdx);
+        const val = line.slice(eqIdx);
+        return <span><span className="text-violet-300 font-semibold">{key}</span><span className="text-amber-200">{val}</span></span>;
+      }
+      return <span className="text-slate-200">{line}</span>;
+    }
+    if (lang === "java") {
+      if (line.trim().startsWith("//") || line.trim().startsWith("/*") || line.trim().startsWith("*")) {
+        return <span className="text-slate-500 italic">{line}</span>;
+      }
+      if (line.trim().startsWith("@")) {
+        return <span className="text-amber-400 font-bold">{line}</span>;
+      }
+      return <span className="text-slate-200">{line}</span>;
+    }
+    return renderHighlightedLine(line, isGradle);
+  }
+
+  return (
+    <div className="flex-1 h-0 overflow-auto bg-[#080d1a] text-slate-100 font-mono text-[11px] leading-relaxed relative flex select-text">
+      {/* Line Numbers Gutter */}
+      <div className="py-3 px-2 bg-[#0e1526] border-r border-slate-800/80 select-none text-right shrink-0 text-slate-500 font-mono text-[10px] min-w-[36px]">
+        {lines.map((_, i) => (
+          <div key={i} className="h-5 flex items-center justify-end pr-1">
+            {i + 1}
+          </div>
+        ))}
+      </div>
+
+      {/* Code Area with Horizontal Scroll */}
+      <div className="p-3 flex-1 overflow-x-auto whitespace-pre font-mono text-[11px] leading-relaxed">
+        {lines.map((line, i) => (
+          <div key={i} className="h-5 flex items-center hover:bg-blue-500/10 px-1 rounded transition-colors">
+            {renderLine(line)}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function FolderPreview({ state, onCustomActionsChange }: FolderPreviewProps) {
@@ -220,6 +404,8 @@ export function FolderPreview({ state, onCustomActionsChange }: FolderPreviewPro
   const [addName, setAddName] = useState("");
   const [renamingPath, setRenamingPath] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [previewMode, setPreviewMode] = useState<"tree" | "code">("tree");
+  const [copied, setCopied] = useState(false);
 
   const updateActions = (newActions: CustomTreeAction[]) => {
     setCustomActions(newActions);
@@ -268,16 +454,44 @@ export function FolderPreview({ state, onCustomActionsChange }: FolderPreviewPro
     setRenamingPath(null);
   };
 
+  // Generate live code for pom.xml or build.gradle
+  const isGradle = state.buildTool === "gradle";
+  const buildFileName = isGradle ? "build.gradle" : "pom.xml";
+
+  const generatedBuildCode = useMemo(() => {
+    if (isGradle) {
+      return generateBuildGradle(state);
+    }
+    return generatePomXml(state);
+  }, [state, isGradle]);
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(generatedBuildCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownloadFile = () => {
+    const mimeType = isGradle ? "text/plain" : "application/xml";
+    const blob = new Blob([generatedBuildCode], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = buildFileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   // Construct tree applying customActions
   const tree = useMemo(() => {
     const base = buildBaseTree(state);
 
-    // Apply deletions
     const deletedPaths = new Set(
       customActions.filter((a) => a.type === "delete").map((a) => a.path)
     );
 
-    // Apply renames map
     const renameMap = new Map<string, string>();
     customActions.forEach((a) => {
       if (a.type === "rename" && a.targetName) {
@@ -285,7 +499,6 @@ export function FolderPreview({ state, onCustomActionsChange }: FolderPreviewPro
       }
     });
 
-    // Helper to filter and mutate nodes recursively
     function processNode(node: FolderNode): FolderNode | null {
       if (deletedPaths.has(node.path)) return null;
 
@@ -310,7 +523,6 @@ export function FolderPreview({ state, onCustomActionsChange }: FolderPreviewPro
 
     let processedTree = processNode(base) || base;
 
-    // Apply additions
     const addedActions = customActions.filter((a) => a.type === "add");
     addedActions.forEach((action) => {
       const parentDir = action.path.substring(0, action.path.lastIndexOf("/"));
@@ -322,7 +534,6 @@ export function FolderPreview({ state, onCustomActionsChange }: FolderPreviewPro
         children: action.nodeType === "folder" ? [] : undefined,
       };
 
-      // Traverse tree to inject new node into parent
       function injectNode(root: FolderNode): boolean {
         if (root.path === parentDir) {
           if (!root.children) root.children = [];
@@ -345,23 +556,71 @@ export function FolderPreview({ state, onCustomActionsChange }: FolderPreviewPro
 
   return (
     <div className="flex flex-col h-full space-y-3">
-      {/* Header with customization reset */}
+      {/* Header with View Mode Tabs & Customization Reset */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Eye className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-          <span className="text-xs font-bold text-slate-600 dark:text-muted-foreground uppercase tracking-wider">
-            Live Folder Structure
-          </span>
+        {/* Mode Switcher Tabs */}
+        <div className="flex items-center gap-1 bg-slate-200/80 dark:bg-black/40 p-1 rounded-xl border border-slate-300 dark:border-white/10">
+          <button
+            onClick={() => setPreviewMode("tree")}
+            className={cn(
+              "px-3 py-1 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition-all",
+              previewMode === "tree"
+                ? "bg-white dark:bg-blue-600 text-blue-700 dark:text-white shadow-sm"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+            )}
+          >
+            <Folder className="w-3.5 h-3.5 text-amber-500" />
+            Folder View
+          </button>
+          <button
+            onClick={() => setPreviewMode("code")}
+            className={cn(
+              "px-3 py-1 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition-all",
+              previewMode === "code"
+                ? "bg-white dark:bg-blue-600 text-blue-700 dark:text-white shadow-sm"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+            )}
+          >
+            <FileCode className="w-3.5 h-3.5 text-blue-500" />
+            {buildFileName}
+          </button>
         </div>
-        {customActions.length > 0 && (
+
+        {previewMode === "tree" && customActions.length > 0 && (
           <button
             onClick={handleReset}
-            title="Reset customizations"
+            title="Reset tree customizations"
             className="flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-colors font-medium"
           >
             <RotateCcw className="w-3 h-3" />
             Reset Tree
           </button>
+        )}
+
+        {previewMode === "code" && (
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={handleDownloadFile}
+              className="p-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 transition-all cursor-pointer"
+              title={`Download ${buildFileName}`}
+              aria-label={`Download ${buildFileName}`}
+            >
+              <Download className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              onClick={handleCopyCode}
+              className="p-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-400 border border-blue-500/30 transition-all cursor-pointer"
+              title={copied ? "Copied!" : "Copy code"}
+              aria-label="Copy code"
+            >
+              {copied ? (
+                <Check className="w-3.5 h-3.5 text-emerald-500" />
+              ) : (
+                <Copy className="w-3.5 h-3.5" />
+              )}
+            </button>
+          </div>
         )}
       </div>
 
@@ -374,35 +633,48 @@ export function FolderPreview({ state, onCustomActionsChange }: FolderPreviewPro
             <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
             <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
           </div>
-          <span className="text-[10px] font-mono font-semibold text-slate-600 dark:text-muted-foreground truncate">
-            {state.artifactId || "inventory-service"}.zip
+          <span className="text-[10px] font-mono font-semibold text-slate-600 dark:text-muted-foreground truncate flex items-center gap-1.5">
+            {previewMode === "tree" ? (
+              <>{state.artifactId || "inventory-service"}.zip</>
+            ) : (
+              <span className="text-blue-600 dark:text-cyan-300 font-bold">{buildFileName}</span>
+            )}
           </span>
         </div>
 
-        {/* Tree Container */}
-        <div className="p-3.5 flex-1 h-0 overflow-y-auto">
-          <TreeNodeRenderer
-            node={tree}
-            depth={0}
-            addingToPath={addingToPath}
-            setAddingToPath={setAddingToPath}
-            addType={addType}
-            setAddType={setAddType}
-            addName={addName}
-            setAddName={setAddName}
-            handleAdd={handleAdd}
-            renamingPath={renamingPath}
-            setRenamingPath={setRenamingPath}
-            renameValue={renameValue}
-            setRenameValue={setRenameValue}
-            handleRename={handleRename}
-            handleDelete={handleDelete}
+        {/* View Mode Content */}
+        {previewMode === "tree" ? (
+          <div className="p-3.5 flex-1 h-0 overflow-y-auto">
+            <TreeNodeRenderer
+              node={tree}
+              depth={0}
+              addingToPath={addingToPath}
+              setAddingToPath={setAddingToPath}
+              addType={addType}
+              setAddType={setAddType}
+              addName={addName}
+              setAddName={setAddName}
+              handleAdd={handleAdd}
+              renamingPath={renamingPath}
+              setRenamingPath={setRenamingPath}
+              renameValue={renameValue}
+              setRenameValue={setRenameValue}
+              handleRename={handleRename}
+              handleDelete={handleDelete}
+            />
+          </div>
+        ) : (
+          <CodePreviewContainer
+            code={generatedBuildCode}
+            lang={isGradle ? "gradle" : "xml"}
           />
-        </div>
+        )}
 
         {/* Footer Hint */}
         <div className="p-2.5 border-t border-slate-200 dark:border-white/5 bg-slate-100/80 dark:bg-black/20 text-[10px] text-slate-500 dark:text-muted-foreground text-center font-medium">
-          Hover any item to add, rename, or remove nodes
+          {previewMode === "tree"
+            ? "Hover any item to add, rename, or remove nodes"
+            : `Live preview of ${buildFileName} · updates as you change settings`}
         </div>
       </div>
     </div>
@@ -446,7 +718,10 @@ function TreeNodeRenderer({
   const isKeyFile =
     node.name.endsWith(".java") ||
     node.name.endsWith(".yml") ||
+    node.name.endsWith(".properties") ||
     node.name === "pom.xml" ||
+    node.name === "build.gradle" ||
+    node.name === "settings.gradle" ||
     node.name === "docker-compose.yml" ||
     node.name.endsWith(".sql");
 

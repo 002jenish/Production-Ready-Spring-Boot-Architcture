@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "next-themes";
 import {
   ArrowRight,
   Code2,
@@ -10,94 +11,145 @@ import {
   Layers,
   Shield,
   Zap,
-  GitBranch,
-  Star,
   CheckCircle2,
-  Terminal,
-  Cpu,
   Boxes,
   Sparkles,
-  ChevronRight,
   FileCode,
-  FolderTree
+  FolderTree,
+  Moon,
+  Sun,
+  ChevronRight,
+  Cpu,
+  GitBranch,
+  Star,
+  Terminal,
 } from "lucide-react";
 
-const features = [
+// ── Data ─────────────────────────────────────────────────────────────────────
+
+const tools = [
   {
-    icon: <Layers className="w-6 h-6 text-blue-400" />,
-    title: "Visual Architecture Designer",
+    id: "project",
+    href: "/generate",
+    icon: <FolderTree className="w-7 h-7" />,
+    badge: "Full Scaffolder",
+    badgeColor: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+    title: "Project ZIP Generator",
     description:
-      "Choose from Layered, Hexagonal, Clean, or Modular Monolith patterns with real-time interactive diagrams.",
-    bg: "from-blue-500/10 to-indigo-500/5 border-blue-500/20",
-    accent: "#3b82f6"
+      "Generate a complete, compilable Spring Boot project with your chosen architecture pattern, dependencies, and config format. Download as a ready-to-run ZIP.",
+    gradient: "from-blue-600 via-indigo-600 to-violet-600",
+    glow: "shadow-blue-500/20",
+    cta: "Launch Scaffolder",
+    highlights: ["Visual architecture picker", "200+ live Spring starters", "JWT, Security, Docker, CI/CD"],
+    emoji: "🚀",
   },
   {
-    icon: <Zap className="w-6 h-6 text-violet-400" />,
-    title: "Instant ZIP Scaffolding",
+    id: "pom",
+    href: "/generate-pom",
+    icon: <FileCode className="w-7 h-7" />,
+    badge: "pom.xml / build.gradle",
+    badgeColor: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+    title: "Build File Generator",
     description:
-      "Generates a complete, compilable Spring Boot project ZIP in <2 seconds. Unzip and run immediately.",
-    bg: "from-violet-500/10 to-purple-500/5 border-violet-500/20",
-    accent: "#8b5cf6"
-  },
-  {
-    icon: <Shield className="w-6 h-6 text-emerald-400" />,
-    title: "Production-Grade Security",
-    description:
-      "Stateless JWT auth, Spring Security, OAuth2, and BCrypt pre-configured with industry standard security filters.",
-    bg: "from-emerald-500/10 to-teal-500/5 border-emerald-500/20",
-    accent: "#10b981"
-  },
-  {
-    icon: <Code2 className="w-6 h-6 text-cyan-400" />,
-    title: "Production Ready DevOps",
-    description:
-      "Multi-profile YAML configs, Flyway DB migrations, multi-stage Dockerfiles, and GitHub Actions CI pipelines.",
-    bg: "from-cyan-500/10 to-sky-500/5 border-cyan-500/20",
-    accent: "#06b6d4"
+      "Need just the pom.xml or build.gradle? Quickly generate a production-ready Maven or Gradle build file with precise dependency coordinates — no project setup needed.",
+    gradient: "from-emerald-500 via-teal-500 to-cyan-500",
+    glow: "shadow-emerald-500/20",
+    cta: "Open Generator",
+    highlights: ["Maven & Gradle support", "Spring Initializr metadata", "Copy or download instantly"],
+    emoji: "📄",
   },
 ];
 
+const features = [
+  {
+    icon: <Layers className="w-5 h-5 text-blue-400" />,
+    title: "Visual Architecture Designer",
+    description: "Layered, Hexagonal, Clean, or Modular Monolith — pick your pattern with a single click.",
+    border: "border-blue-500/20",
+    bg: "from-blue-500/10 to-indigo-500/5",
+  },
+  {
+    icon: <Zap className="w-5 h-5 text-violet-400" />,
+    title: "Instant ZIP Scaffolding",
+    description: "A compilable Spring Boot project ZIP generated in under 2 seconds. Unzip and run immediately.",
+    border: "border-violet-500/20",
+    bg: "from-violet-500/10 to-purple-500/5",
+  },
+  {
+    icon: <Shield className="w-5 h-5 text-emerald-400" />,
+    title: "Production-Grade Security",
+    description: "JWT auth, Spring Security, OAuth2, and BCrypt pre-configured with industry-standard filters.",
+    border: "border-emerald-500/20",
+    bg: "from-emerald-500/10 to-teal-500/5",
+  },
+  {
+    icon: <Code2 className="w-5 h-5 text-cyan-400" />,
+    title: "DevOps Ready",
+    description: "Multi-profile YAML / .properties configs, Flyway migrations, multi-stage Dockerfiles, GitHub Actions CI.",
+    border: "border-cyan-500/20",
+    bg: "from-cyan-500/10 to-sky-500/5",
+  },
+  {
+    icon: <Cpu className="w-5 h-5 text-amber-400" />,
+    title: "200+ Real Spring Starters",
+    description: "Fetched live from Spring Initializr. All coordinates verified — no more fake starter IDs.",
+    border: "border-amber-500/20",
+    bg: "from-amber-500/10 to-orange-500/5",
+  },
+  {
+    icon: <GitBranch className="w-5 h-5 text-pink-400" />,
+    title: "Config Format Choice",
+    description: "Generate application.yml or application.properties — your choice, live preview updates instantly.",
+    border: "border-pink-500/20",
+    bg: "from-pink-500/10 to-rose-500/5",
+  },
+];
+
+const steps = [
+  { n: "01", title: "Choose Your Tool", body: "Start with the Full Project Scaffolder or the lightweight Build File Generator." },
+  { n: "02", title: "Configure Project", body: "Set metadata, build tool, config format, Spring Boot version, and Java SDK." },
+  { n: "03", title: "Pick Architecture", body: "Select Layered, Hexagonal, Clean, or Modular Monolith patterns visually." },
+  { n: "04", title: "Select Dependencies", body: "Search 200+ live Spring starters. Selected deps float to the top for easy review." },
+  { n: "05", title: "Preview Live", body: "See the generated pom.xml, build.gradle, YAML, and folder structure update in real-time." },
+  { n: "06", title: "Download & Run", body: "Download a compilable ZIP. Unzip, open in IntelliJ or VS Code, and run immediately." },
+];
+
 const stats = [
-  { value: "4", label: "Architecture Patterns", icon: <Boxes className="w-4 h-4 text-blue-400" /> },
-  { value: "18+", label: "Spring Boot Starters", icon: <Cpu className="w-4 h-4 text-violet-400" /> },
-  { value: "< 2s", label: "Generation Speed", icon: <Zap className="w-4 h-4 text-emerald-400" /> },
-  { value: "100%", label: "Compilable Java 21", icon: <CheckCircle2 className="w-4 h-4 text-cyan-400" /> },
+  { value: "4",    label: "Architecture Patterns",   icon: <Boxes className="w-4 h-4 text-blue-400" /> },
+  { value: "200+", label: "Spring Boot Starters",    icon: <Cpu className="w-4 h-4 text-violet-400" /> },
+  { value: "< 2s", label: "Generation Speed",        icon: <Zap className="w-4 h-4 text-emerald-400" /> },
+  { value: "100%", label: "Compilable Java 21",      icon: <CheckCircle2 className="w-4 h-4 text-cyan-400" /> },
 ];
 
 const sampleTabs = [
   {
     id: "pom",
     label: "pom.xml",
-    language: "xml",
     content: `<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0">
-    <modelVersion>4.0.0</modelVersion>
-    <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.3</version>
-    </parent>
-    <groupId>com.archforge</groupId>
-    <artifactId>inventory-service</artifactId>
-    <properties>
-        <java.version>21</java.version>
-    </properties>
-    <dependencies>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-security</artifactId>
-        </dependency>
-    </dependencies>
-</project>`
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.5.3</version>
+  </parent>
+  <groupId>com.example</groupId>
+  <artifactId>inventory-service</artifactId>
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+  </dependencies>
+</project>`,
   },
   {
     id: "security",
     label: "SecurityConfig.java",
-    language: "java",
     content: `@Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
@@ -105,27 +157,31 @@ public class SecurityConfig {
     private final JwtFilter jwtFilter;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(
+            HttpSecurity http) throws Exception {
         return http
             .csrf(AbstractHttpConfigurer::disable)
-            .sessionManagement(s -> s.sessionCreationPolicy(STATELESS))
+            .sessionManagement(s -> s
+                .sessionCreationPolicy(STATELESS))
             .authorizeHttpRequests(a -> a
-                .requestMatchers("/api/auth/**", "/swagger-ui/**").permitAll()
+                .requestMatchers("/api/auth/**").permitAll()
                 .anyRequest().authenticated())
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(jwtFilter,
+                UsernamePasswordAuthenticationFilter.class)
             .build();
     }
-}`
+}`,
   },
   {
     id: "yaml",
     label: "application-dev.yml",
-    language: "yaml",
     content: `spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/inventory_db
     username: \${DB_USERNAME:postgres}
     password: \${DB_PASSWORD:password}
+    hikari:
+      maximum-pool-size: 5
   jpa:
     hibernate:
       ddl-auto: validate
@@ -134,12 +190,11 @@ public class SecurityConfig {
 application:
   security:
     jwt:
-      expiration: 86400000 # 24 Hours`
+      expiration: 86400000 # 24 Hours`,
   },
   {
     id: "docker",
     label: "docker-compose.yml",
-    language: "yaml",
     content: `version: '3.9'
 services:
   app:
@@ -158,158 +213,243 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: inventory_db
-      POSTGRES_PASSWORD: password`
-  }
+      POSTGRES_PASSWORD: password`,
+  },
 ];
+
+// ── Theme Toggle ──────────────────────────────────────────────────────────────
+
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return <div className="w-9 h-9" />;
+
+  const isDark = theme === "dark";
+  return (
+    <button
+      id="theme-toggle"
+      aria-label="Toggle theme"
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      className="w-9 h-9 flex items-center justify-center rounded-xl glass-panel border border-white/10 hover:border-blue-500/40 text-slate-600 dark:text-slate-300 hover:text-blue-500 dark:hover:text-blue-400 transition-all"
+    >
+      {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+    </button>
+  );
+}
+
+// ── Home Page ─────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState("security");
 
   return (
-    <div className="min-h-screen bg-mesh text-foreground relative overflow-hidden">
-      {/* Background Animated Blobs */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+    <div className="min-h-screen bg-mesh text-foreground relative overflow-x-hidden">
+      {/* Animated background blobs */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden>
         <motion.div
-          animate={{
-            x: [0, 80, 0],
-            y: [0, 50, 0],
-            scale: [1, 1.2, 1],
-          }}
-          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full bg-blue-600/15 blur-[120px]"
+          animate={{ x: [0, 80, 0], y: [0, 50, 0], scale: [1, 1.2, 1] }}
+          transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-blue-600/10 dark:bg-blue-600/15 blur-[140px]"
         />
         <motion.div
-          animate={{
-            x: [0, -60, 0],
-            y: [0, 80, 0],
-            scale: [1, 1.15, 1],
-          }}
-          transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-1/3 -right-32 w-[550px] h-[550px] rounded-full bg-violet-600/15 blur-[140px]"
+          animate={{ x: [0, -60, 0], y: [0, 80, 0], scale: [1, 1.15, 1] }}
+          transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-1/3 -right-40 w-[650px] h-[650px] rounded-full bg-violet-600/10 dark:bg-violet-600/15 blur-[160px]"
+        />
+        <motion.div
+          animate={{ x: [0, 40, 0], y: [0, -50, 0], scale: [1, 1.1, 1] }}
+          transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute bottom-1/4 left-1/3 w-[400px] h-[400px] rounded-full bg-emerald-600/8 dark:bg-emerald-600/12 blur-[120px]"
         />
       </div>
 
-      {/* Navigation */}
-      <header className="fixed top-0 inset-x-0 z-50 glass-panel border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 via-indigo-600 to-violet-600 flex items-center justify-center text-white font-bold text-sm shadow-lg group-hover:scale-105 transition-transform">
+      {/* ── Navbar ── */}
+      <header className="fixed top-0 inset-x-0 z-50 glass-panel border-b border-slate-200/80 dark:border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2.5 group shrink-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-blue-500 via-indigo-600 to-violet-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm shadow-lg group-hover:scale-105 transition-transform">
               AF
             </div>
-            <span className="font-extrabold text-xl tracking-tight gradient-text">
+            <span className="font-extrabold text-lg sm:text-xl tracking-tight gradient-text hidden sm:inline">
               ArchForge
             </span>
           </Link>
 
-          <div className="flex items-center gap-5">
-            <a
-              href="https://github.com"
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          {/* Nav links + toggle */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link
+              href="/generate-pom"
+              className="hidden sm:flex items-center gap-1.5 text-xs font-mono font-bold text-slate-700 dark:text-slate-300 hover:text-blue-500 dark:hover:text-blue-400 transition-colors px-3 py-1.5 rounded-xl glass-panel border border-slate-200 dark:border-white/10"
             >
-              <GitBranch className="w-4 h-4 text-blue-400" />
-              <span className="hidden sm:inline">GitHub</span>
-            </a>
+              <FileCode className="w-3.5 h-3.5 text-emerald-500" />
+              pom.xml Generator
+            </Link>
+
             <Link
               href="/generate"
-              className="group flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold hover:brightness-110 transition-all shadow-lg glow-primary"
+              className="flex items-center gap-1.5 px-3 sm:px-5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-semibold hover:brightness-110 transition-all shadow-lg"
             >
-              <span>Start Generator</span>
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              <FolderTree className="w-3.5 h-3.5 sm:hidden" />
+              <span className="hidden sm:inline">Project Scaffolder</span>
+              <span className="sm:hidden">Scaffolder</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </Link>
+
+            <ThemeToggle />
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="pt-36 pb-20 px-6 max-w-7xl mx-auto text-center relative z-10">
-        {/* Top Badge */}
+      {/* ── Hero ── */}
+      <section className="pt-32 pb-16 sm:pt-40 sm:pb-24 px-4 sm:px-6 max-w-7xl mx-auto text-center relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold glass-panel border border-blue-500/30 text-blue-300 mb-8 shadow-inner"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold glass-panel border border-blue-500/30 text-blue-600 dark:text-blue-300 mb-8 shadow-inner"
         >
           <Sparkles className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
-          <span>Spring Initializr + JHipster Hybrid Architecture Builder</span>
+          <span>Spring Initializr · JHipster Architecture Builder · Production Ready</span>
         </motion.div>
 
-        {/* Hero Title */}
         <motion.h1
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight mb-8 leading-[1.15]"
+          className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight mb-6 leading-[1.1]"
         >
-          Forge Production-Ready <br className="hidden sm:inline" />
+          Forge Production-Ready{" "}
+          <br className="hidden sm:inline" />
           <span className="gradient-text">Spring Boot Architecture</span>
         </motion.h1>
 
-        {/* Subtitle */}
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed font-normal"
+          className="text-base sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed"
         >
-          Visually select your architecture pattern (Layered, Hexagonal, Clean, or Modular Monolith), choose dependencies, and download a compilable Java 21 starter project ZIP instantly.
+          Visually select your architecture, pick 200+ live Spring starters, configure YAML or Properties,
+          and download a compilable Java 21 starter ZIP — in under 2 seconds.
         </motion.p>
 
-        {/* CTA Buttons */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16"
-        >
-          <Link
-            href="/generate"
-            className="group flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 text-white font-bold text-base hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl glow-primary"
-          >
-            <Zap className="w-5 h-5 fill-current text-yellow-300" />
-            <span>Launch Visual Generator</span>
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </Link>
-          <a
-            href="#interactive-demo"
-            className="flex items-center gap-2 px-8 py-4 rounded-2xl font-semibold text-base glass-panel hover:bg-white/5 border border-white/10 transition-all"
-          >
-            <span>Explore Templates</span>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          </a>
-        </motion.div>
-
-        {/* Stats Grid */}
+        {/* Stats */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.4 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto"
+          transition={{ duration: 0.7, delay: 0.3 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl mx-auto mb-16"
         >
-          {stats.map((stat, i) => (
+          {stats.map((s, i) => (
             <div
               key={i}
-              className="glass-panel p-5 rounded-2xl border border-white/5 text-center flex flex-col items-center justify-center hover:border-blue-500/30 transition-colors"
+              className="glass-panel p-4 rounded-2xl border border-slate-200 dark:border-white/5 text-center flex flex-col items-center gap-1 hover:border-blue-500/30 transition-colors"
             >
-              <div className="flex items-center gap-1.5 mb-1">
-                {stat.icon}
-                <span className="text-3xl font-extrabold gradient-text">
-                  {stat.value}
-                </span>
-              </div>
-              <span className="text-xs font-medium text-muted-foreground">
-                {stat.label}
-              </span>
+              {s.icon}
+              <span className="text-2xl font-extrabold gradient-text">{s.value}</span>
+              <span className="text-[11px] font-medium text-muted-foreground">{s.label}</span>
             </div>
           ))}
         </motion.div>
       </section>
 
-      {/* Interactive Code Preview Section */}
-      <section id="interactive-demo" className="py-16 px-6 max-w-5xl mx-auto relative z-10">
+      {/* ── Tool Cards ── */}
+      <section id="tools" className="py-8 sm:py-12 px-4 sm:px-6 max-w-5xl mx-auto relative z-10">
+        <div className="text-center mb-10">
+          <h2 className="text-2xl sm:text-3xl font-extrabold mb-3">Choose Your Generator</h2>
+          <p className="text-muted-foreground text-sm max-w-lg mx-auto">
+            Two focused tools — one for full project scaffolding, one for build files only.
+          </p>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-5">
+          {tools.map((tool, i) => (
+            <motion.div
+              key={tool.id}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: i * 0.1 }}
+              whileHover={{ y: -6 }}
+              className="glass-panel rounded-3xl border border-slate-200 dark:border-white/10 p-6 sm:p-8 flex flex-col gap-5 group relative overflow-hidden hover:border-blue-500/30 dark:hover:border-blue-500/30 transition-all shadow-xl"
+            >
+              {/* gradient glow */}
+              <div
+                className={`absolute inset-0 bg-gradient-to-br ${tool.gradient} opacity-0 group-hover:opacity-5 transition-opacity pointer-events-none rounded-3xl`}
+              />
+
+              <div className="flex items-start justify-between">
+                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${tool.gradient} flex items-center justify-center text-white shadow-lg ${tool.glow} shadow-xl`}>
+                  {tool.icon}
+                </div>
+                <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border ${tool.badgeColor}`}>
+                  {tool.badge}
+                </span>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-extrabold mb-2 text-slate-900 dark:text-white">{tool.emoji} {tool.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{tool.description}</p>
+              </div>
+
+              <ul className="space-y-1.5">
+                {tool.highlights.map((h, j) => (
+                  <li key={j} className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 font-medium">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                    {h}
+                  </li>
+                ))}
+              </ul>
+
+              <Link
+                href={tool.href}
+                className={`mt-auto w-full flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r ${tool.gradient} text-white font-bold text-sm hover:brightness-110 transition-all shadow-lg`}
+              >
+                {tool.cta}
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── How it works ── */}
+      <section className="py-16 sm:py-24 px-4 sm:px-6 max-w-6xl mx-auto relative z-10">
+        <div className="text-center mb-12">
+          <h2 className="text-2xl sm:text-3xl font-extrabold mb-3">How It Works</h2>
+          <p className="text-muted-foreground text-sm max-w-md mx-auto">
+            From zero to a running Spring Boot project in six steps.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {steps.map((step, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: i * 0.07 }}
+              className="glass-panel rounded-2xl border border-slate-200 dark:border-white/10 p-5 sm:p-6 flex gap-4 hover:border-blue-500/20 dark:hover:border-blue-500/20 transition-colors"
+            >
+              <span className="text-3xl font-extrabold gradient-text shrink-0 leading-none mt-0.5">
+                {step.n}
+              </span>
+              <div>
+                <h4 className="font-bold text-sm mb-1 text-slate-900 dark:text-white">{step.title}</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed">{step.body}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Interactive Code Preview ── */}
+      <section id="preview" className="py-8 sm:py-16 px-4 sm:px-6 max-w-5xl mx-auto relative z-10">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold mb-3">Generated Code Quality</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold mb-3">Generated Code Quality</h2>
           <p className="text-muted-foreground text-sm">
             Clean, formatted Java 21 & Spring Boot 3.5 code adhering to SOLID principles.
           </p>
@@ -320,46 +460,44 @@ export default function HomePage() {
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="glass-panel rounded-2xl overflow-hidden border border-white/10 shadow-2xl"
+          className="glass-panel rounded-2xl overflow-hidden border border-slate-200 dark:border-white/10 shadow-2xl"
         >
-          {/* Code Window Header / Tabs */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-secondary/50 flex-wrap gap-2">
+          {/* Window header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b border-slate-200 dark:border-white/10 bg-slate-100/80 dark:bg-secondary/50 gap-3">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-red-500/80" />
               <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
               <div className="w-3 h-3 rounded-full bg-green-500/80" />
-              <span className="ml-2 text-xs font-mono text-muted-foreground hidden sm:inline">
-                ArchForge Output Preview
-              </span>
+              <span className="ml-2 text-xs font-mono text-muted-foreground hidden sm:inline">ArchForge Output Preview</span>
             </div>
 
-            {/* Code Tabs */}
-            <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/5">
+            {/* Tabs — scroll on mobile */}
+            <div className="flex items-center gap-1 bg-black/20 dark:bg-black/40 p-1 rounded-xl border border-slate-200 dark:border-white/5 overflow-x-auto scrollbar-hide">
               {sampleTabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all flex items-center gap-1.5 ${
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-mono whitespace-nowrap transition-all flex items-center gap-1 sm:gap-1.5 ${
                     activeTab === tab.id
                       ? "bg-blue-600 text-white font-semibold shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  <FileCode className="w-3.5 h-3.5" />
-                  {tab.label}
+                  <FileCode className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                  <span className="truncate max-w-[80px] sm:max-w-none">{tab.label}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Code Editor Body */}
-          <div className="p-6 bg-[#040711] font-mono text-xs sm:text-sm text-slate-200 overflow-x-auto min-h-[300px]">
+          {/* Code body */}
+          <div className="p-4 sm:p-6 bg-[#040711] font-mono text-[11px] sm:text-sm text-slate-200 overflow-x-auto min-h-[240px] sm:min-h-[300px]">
             <AnimatePresence mode="wait">
               <motion.pre
                 key={activeTab}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
+                exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.2 }}
                 className="leading-relaxed"
               >
@@ -370,62 +508,99 @@ export default function HomePage() {
         </motion.div>
       </section>
 
-      {/* Feature Grid */}
-      <section className="py-20 px-6 max-w-6xl mx-auto relative z-10">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-extrabold mb-4">
-            Everything You Need, Built Right
-          </h2>
-          <p className="text-muted-foreground text-base max-w-xl mx-auto">
-            Eliminate boilerplate overhead. Generate a clean foundation tailored to your exact architectural requirements.
+      {/* ── Feature Grid ── */}
+      <section className="py-16 sm:py-24 px-4 sm:px-6 max-w-6xl mx-auto relative z-10">
+        <div className="text-center mb-12">
+          <h2 className="text-2xl sm:text-4xl font-extrabold mb-4">Everything You Need, Built Right</h2>
+          <p className="text-muted-foreground text-sm max-w-xl mx-auto">
+            Eliminate boilerplate overhead. Generate a clean foundation tailored to your exact requirements.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          {features.map((feature, idx) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {features.map((f, i) => (
             <motion.div
-              key={idx}
+              key={i}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: idx * 0.1 }}
+              transition={{ duration: 0.4, delay: i * 0.07 }}
               whileHover={{ y: -4 }}
-              className={`glass-panel p-8 rounded-3xl border bg-gradient-to-br ${feature.bg} transition-all`}
+              className={`glass-panel p-6 rounded-3xl border bg-gradient-to-br ${f.bg} ${f.border} transition-all`}
             >
-              <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-6 shadow-inner">
-                {feature.icon}
+              <div className="w-10 h-10 rounded-xl bg-white/5 dark:bg-white/5 border border-white/10 flex items-center justify-center mb-4 shadow-inner">
+                {f.icon}
               </div>
-              <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                {feature.description}
-              </p>
+              <h3 className="text-base font-bold mb-2 text-slate-900 dark:text-white">{f.title}</h3>
+              <p className="text-muted-foreground text-xs leading-relaxed">{f.description}</p>
             </motion.div>
           ))}
         </div>
       </section>
 
-      {/* Call to Action Footer Banner */}
-      <section className="py-20 px-6 max-w-4xl mx-auto text-center relative z-10">
-        <div className="glass-panel p-12 rounded-3xl border border-blue-500/30 relative overflow-hidden bg-gradient-to-br from-blue-900/20 via-indigo-900/10 to-transparent">
-          <h2 className="text-3xl font-extrabold mb-4">
-            Ready to Scaffold Your Next Project?
-          </h2>
-          <p className="text-muted-foreground text-sm max-w-md mx-auto mb-8">
-            Create your custom Spring Boot project structure with zero configuration hassle.
-          </p>
-          <Link
-            href="/generate"
-            className="inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-base hover:scale-105 transition-all shadow-xl glow-primary"
-          >
-            <Download className="w-5 h-5" />
-            <span>Generate Project ZIP Now</span>
-          </Link>
-        </div>
+      {/* ── CTA Banner ── */}
+      <section className="py-16 sm:py-24 px-4 sm:px-6 max-w-4xl mx-auto text-center relative z-10">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.97 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="glass-panel p-8 sm:p-14 rounded-3xl border border-blue-500/30 relative overflow-hidden bg-gradient-to-br from-blue-900/20 via-indigo-900/10 to-transparent"
+        >
+          {/* Decorative glow */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl" aria-hidden>
+            <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-blue-600/20 blur-[80px]" />
+            <div className="absolute -bottom-20 -left-20 w-64 h-64 rounded-full bg-violet-600/20 blur-[80px]" />
+          </div>
+
+          <div className="relative">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold glass-panel border border-blue-500/30 text-blue-400 mb-6">
+              <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+              Production Ready
+            </div>
+            <h2 className="text-2xl sm:text-4xl font-extrabold mb-4">
+              Ready to Scaffold Your Next Project?
+            </h2>
+            <p className="text-muted-foreground text-sm max-w-md mx-auto mb-8">
+              Create your custom Spring Boot project structure with zero configuration hassle. Download and run in seconds.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link
+                href="/generate"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 text-white font-bold text-sm hover:scale-105 transition-all shadow-xl"
+              >
+                <Zap className="w-4 h-4 fill-yellow-300 text-yellow-300" />
+                Full Project Scaffolder
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link
+                href="/generate-pom"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-semibold text-sm glass-panel hover:bg-white/5 border border-slate-200 dark:border-white/10 transition-all text-emerald-600 dark:text-emerald-400"
+              >
+                <FileCode className="w-4 h-4" />
+                Build File Generator
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </Link>
+            </div>
+          </div>
+        </motion.div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-8 border-t border-white/5 text-center text-xs text-muted-foreground relative z-10">
-        <p>ArchForge © {new Date().getFullYear()} — Production Ready Spring Boot Scaffolder.</p>
+      {/* ── Footer ── */}
+      <footer className="py-8 border-t border-slate-200 dark:border-white/5 text-center text-xs text-muted-foreground relative z-10 px-4">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white font-bold text-[10px]">
+              AF
+            </div>
+            <span className="font-semibold text-slate-700 dark:text-slate-300">ArchForge</span>
+          </div>
+          <p>© {new Date().getFullYear()} ArchForge — Production Ready Spring Boot Scaffolder.</p>
+          <div className="flex items-center gap-4">
+            <Link href="/generate" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Scaffolder</Link>
+            <Link href="/generate-pom" className="hover:text-emerald-500 transition-colors">pom.xml</Link>
+          </div>
+        </div>
       </footer>
     </div>
   );

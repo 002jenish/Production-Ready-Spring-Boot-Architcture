@@ -9,7 +9,7 @@ import { DependenciesStep } from "@/components/wizard/DependenciesStep";
 import { FolderPreview } from "@/components/preview/FolderPreview";
 import { WizardState, CustomTreeAction } from "@/lib/types";
 import { useTheme } from "next-themes";
-import { Moon, Sun, Home, CheckCircle2, XCircle, Eye, X, Terminal, Check, FileCode } from "lucide-react";
+import { Moon, Sun, Home, CheckCircle2, XCircle, Eye, X, Terminal, Check } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +23,6 @@ const DEFAULT_STATE: WizardState = {
   projectName: "inventory-service",
   groupId: "com.java",
   artifactId: "inventory-service",
-  buildTool: "maven",
   javaVersion: "21",
   springBootVersion: "3.5.3",
   architecture: "layered",
@@ -113,48 +112,10 @@ export default function GeneratePage() {
     }
   }, [wizardState]);
 
-  const handleGeneratePom = useCallback(async (deps: string[]) => {
-    const finalState = { ...wizardState, dependencies: deps };
-    setWizardState(finalState);
-    setStatus("generating");
-    setErrorMsg("");
-
-    try {
-      const response = await fetch("/api/generate-pom", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(finalState),
-      });
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({ error: "Unknown error" }));
-        throw new Error(err.error || `Server error: ${response.status}`);
-      }
-
-      const isGradle = finalState.buildTool === "gradle";
-      const filename = isGradle ? "build.gradle" : "pom.xml";
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      markComplete(3);
-      setStatus("success");
-    } catch (err: unknown) {
-      setStatus("error");
-      setErrorMsg(err instanceof Error ? err.message : "pom.xml generation failed. Please try again.");
-    }
-  }, [wizardState]);
-
   const progress = Math.round((completedSteps.length / 3) * 100);
 
   return (
-    <div className="h-screen h-[100dvh] max-h-screen bg-mesh text-foreground flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-mesh text-foreground flex flex-col relative overflow-hidden">
       {/* Top Navigation Bar */}
       <header className="h-16 glass-panel border-b border-slate-200 dark:border-white/10 flex items-center justify-between px-6 shrink-0 z-30">
         <div className="flex items-center gap-4">
@@ -173,18 +134,9 @@ export default function GeneratePage() {
               AF
             </div>
             <span className="font-extrabold text-sm tracking-tight gradient-text">
-              Project Generator
+              ArchForge Generator
             </span>
           </div>
-
-          <Link
-            href="/generate-pom"
-            className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-mono font-bold text-slate-600 dark:text-slate-400 hover:text-blue-500 transition-colors bg-slate-200/50 dark:bg-white/5 border border-slate-300 dark:border-white/10"
-            title="Switch to standalone pom.xml generator"
-          >
-            <FileCode className="w-3.5 h-3.5 text-blue-500" />
-            <span>pom.xml Generator</span>
-          </Link>
         </div>
 
         {/* Center Progress Bar */}
@@ -330,7 +282,6 @@ export default function GeneratePage() {
                   key="step3"
                   data={wizardState}
                   onSubmit={handleGenerate}
-                  onGeneratePom={handleGeneratePom}
                   onBack={() => setStep(2)}
                   isGenerating={status === "generating"}
                   onChange={(partial) => setWizardState((prev) => ({ ...prev, ...partial }))}

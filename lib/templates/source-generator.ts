@@ -1,10 +1,34 @@
 import { GenerateRequest } from "../types";
 import { getBasePackage, getMainClassName, hasJwt, hasSecurity, hasJpa, hasAudit, hasExHandler, hasSwagger } from "./utils";
 
-// ── Main Application Class ────────────────────────────────────────────────────
 export function generateMainClass(req: GenerateRequest): string {
   const pkg = getBasePackage(req);
   const cls = getMainClassName(req);
+  const isWar = req.packaging === "war";
+
+  if (isWar) {
+    return `package ${pkg};
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
+${hasJpa(req) ? "import org.springframework.data.jpa.repository.config.EnableJpaAuditing;\n" : ""}
+@SpringBootApplication${hasJpa(req) && hasAudit(req) ? "\n@EnableJpaAuditing" : ""}
+public class ${cls} extends SpringBootServletInitializer {
+
+    @Override
+    protected SpringApplicationBuilder configure(SpringApplicationBuilder application) {
+        return application.sources(${cls}.class);
+    }
+
+    public static void main(String[] args) {
+        SpringApplication.run(${cls}.class, args);
+    }
+}
+`;
+  }
+
   return `package ${pkg};
 
 import org.springframework.boot.SpringApplication;

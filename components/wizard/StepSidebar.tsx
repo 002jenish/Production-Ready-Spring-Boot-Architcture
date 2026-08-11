@@ -24,7 +24,7 @@ export function StepSidebar({
   onStepClick,
 }: StepSidebarProps) {
   return (
-    <aside className="hidden lg:flex flex-col w-72 shrink-0 glass-panel border-r border-slate-200 dark:border-white/10 p-6 relative z-20">
+    <aside className="hidden lg:flex flex-col w-72 shrink-0 glass-panel border-r border-slate-200 dark:border-white/10 p-6 relative z-20 h-full overflow-y-auto">
       {/* Brand */}
       <div className="flex items-center gap-3 mb-10">
         <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-600 to-violet-600 flex items-center justify-center text-white font-black text-base shadow-lg">

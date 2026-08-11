@@ -201,7 +201,7 @@ export function ArchitectureStep({ data, onNext, onBack, onChange }: Architectur
       </div>
 
       {/* Action buttons */}
-      <div className="flex justify-between items-center pt-4 border-t border-slate-200 dark:border-white/10">
+      <div className="flex justify-between items-center pt-4 pb-8 mb-4 border-t border-slate-200 dark:border-white/10">
         <button
           type="button"
           onClick={onBack}

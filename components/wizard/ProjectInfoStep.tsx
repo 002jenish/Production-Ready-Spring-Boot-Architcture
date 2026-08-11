@@ -5,11 +5,16 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
 import { projectInfoSchema, ProjectInfoFormData } from "@/lib/schema";
-import { JAVA_VERSIONS } from "@/lib/constants";
-import { WizardState } from "@/lib/types";
-import { ArrowRight, FolderGit2, Terminal, RefreshCw, Sparkles } from "lucide-react";
+import { WizardState, ConfigFormat, Packaging } from "@/lib/types";
+import { ArrowRight, FolderGit2, Terminal, RefreshCw, Sparkles, Wrench, Coffee, FileText, Package } from "lucide-react";
 
 interface SpringVersionItem {
+  version: string;
+  label: string;
+  isDefault?: boolean;
+}
+
+interface JavaVersionItem {
   version: string;
   label: string;
   isDefault?: boolean;
@@ -36,8 +41,16 @@ export function ProjectInfoStep({ data, onNext, onChange }: ProjectInfoStepProps
     { version: "3.4.3", label: "3.4.3 (GA)" },
     { version: "3.3.9", label: "3.3.9 (GA)" },
   ]);
+  const [javaVersions, setJavaVersions] = useState<JavaVersionItem[]>([
+    { version: "25", label: "25" },
+    { version: "23", label: "23" },
+    { version: "21", label: "21", isDefault: true },
+    { version: "17", label: "17" },
+  ]);
   const [isLoadingVersions, setIsLoadingVersions] = useState(false);
   const [versionSource, setVersionSource] = useState<string>("default");
+  const [configFormat, setConfigFormat] = useState<ConfigFormat>(data.configFormat ?? "yaml");
+  const [packaging, setPackaging] = useState<Packaging>(data.packaging ?? "jar");
 
   const {
     register,
@@ -51,12 +64,13 @@ export function ProjectInfoStep({ data, onNext, onChange }: ProjectInfoStepProps
       projectName: data.projectName || "inventory-service",
       groupId: data.groupId || "com.java",
       artifactId: data.artifactId || "inventory-service",
+      buildTool: data.buildTool || "maven",
       javaVersion: data.javaVersion || "21",
       springBootVersion: data.springBootVersion || "3.5.3",
     },
   });
 
-  // Fetch official Spring Boot releases dynamically
+  // Fetch official Spring Boot releases and Java versions dynamically from Spring Initializr
   useEffect(() => {
     async function fetchVersions() {
       setIsLoadingVersions(true);
@@ -67,23 +81,30 @@ export function ProjectInfoStep({ data, onNext, onChange }: ProjectInfoStepProps
           if (Array.isArray(json.versions) && json.versions.length > 0) {
             setSpringVersions(json.versions);
             setVersionSource(json.source || "spring-initializr-api");
-            // Set default version if not set
             const defaultVer = json.versions.find((v: SpringVersionItem) => v.isDefault);
             if (defaultVer && !data.springBootVersion) {
               setValue("springBootVersion", defaultVer.version);
             }
           }
+          if (Array.isArray(json.javaVersions) && json.javaVersions.length > 0) {
+            setJavaVersions(json.javaVersions);
+            const defaultJava = json.javaVersions.find((j: JavaVersionItem) => j.isDefault);
+            if (defaultJava && !data.javaVersion) {
+              setValue("javaVersion", defaultJava.version);
+            }
+          }
         }
       } catch (err) {
-        console.warn("Could not load dynamic Spring versions", err);
+        console.warn("Could not load dynamic Spring versions & metadata", err);
       } finally {
         setIsLoadingVersions(false);
       }
     }
     fetchVersions();
-  }, [setValue, data.springBootVersion]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Live real-time sync with parent wizardState as the user types
+  // Live real-time sync with parent wizardState as the user types or selects
   useEffect(() => {
     const subscription = watch((value) => {
       if (onChange) {
@@ -91,13 +112,16 @@ export function ProjectInfoStep({ data, onNext, onChange }: ProjectInfoStepProps
           projectName: value.projectName || "",
           groupId: value.groupId || "",
           artifactId: value.artifactId || "",
+          buildTool: value.buildTool || "maven",
+          configFormat,
+          packaging,
           javaVersion: value.javaVersion || "21",
           springBootVersion: value.springBootVersion || "3.5.3",
         });
       }
     });
     return () => subscription.unsubscribe();
-  }, [watch, onChange]);
+  }, [watch, onChange, configFormat, packaging]);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -106,8 +130,9 @@ export function ProjectInfoStep({ data, onNext, onChange }: ProjectInfoStepProps
   };
 
   const onSubmit = (values: ProjectInfoFormData) => {
-    onNext(values);
+    onNext({ ...values, configFormat, packaging });
   };
+
   const inputStyle =
     "w-full px-4 py-3 rounded-xl bg-slate-100/80 dark:bg-black/40 border border-slate-300 dark:border-white/10 text-slate-900 dark:text-slate-100 text-sm font-mono placeholder:text-slate-400 dark:placeholder:text-muted-foreground/40 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all";
 
@@ -129,12 +154,12 @@ export function ProjectInfoStep({ data, onNext, onChange }: ProjectInfoStepProps
           {versionSource === "spring-initializr-api" && (
             <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-medium">
               <Sparkles className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-              Live Releases API
+              Live Initializr Metadata
             </span>
           )}
         </div>
         <p className="text-slate-600 dark:text-muted-foreground text-sm">
-          Define core metadata, Java SDK runtime, and official Spring Boot release.
+          Define core metadata, build tool, Java runtime, and official Spring Boot release.
         </p>
       </div>
 
@@ -183,28 +208,151 @@ export function ProjectInfoStep({ data, onNext, onChange }: ProjectInfoStepProps
           </div>
         </div>
 
-        {/* Java Version Selector */}
+        {/* Build Tool Selector (Maven vs Gradle) */}
         <div>
-          <label className="block text-xs font-semibold text-slate-700 dark:text-muted-foreground uppercase tracking-wider mb-2">
-            Java Version SDK <span className="text-blue-600 dark:text-blue-400">*</span>
+          <label className="block text-xs font-semibold text-slate-700 dark:text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <Wrench className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+            Build Tool <span className="text-blue-600 dark:text-blue-400">*</span>
           </label>
           <div className="grid grid-cols-2 gap-3">
-            {JAVA_VERSIONS.map((ver) => (
+            {[
+              { id: "maven", label: "Maven", icon: "🛠️", file: "pom.xml" },
+              { id: "gradle", label: "Gradle", icon: "🐘", file: "build.gradle" },
+            ].map((tool) => (
               <label
-                key={ver}
-                className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border cursor-pointer font-mono text-sm font-semibold transition-all ${
-                  watch("javaVersion") === ver
+                key={tool.id}
+                className={`flex items-center justify-between px-4 py-3 rounded-xl border cursor-pointer font-mono text-sm font-semibold transition-all ${
+                  watch("buildTool") === tool.id
                     ? "bg-blue-50 dark:bg-blue-600/20 border-blue-500 text-blue-700 dark:text-blue-400 shadow-sm dark:shadow-[0_0_15px_rgba(59,130,246,0.2)]"
                     : "bg-slate-100/60 dark:bg-black/30 border-slate-300 dark:border-white/10 text-slate-700 dark:text-muted-foreground hover:border-slate-400 dark:hover:border-white/20"
                 }`}
               >
                 <input
                   type="radio"
-                  {...register("javaVersion")}
-                  value={ver}
+                  {...register("buildTool")}
+                  value={tool.id}
                   className="sr-only"
                 />
-                <span>☕ Java {ver}</span>
+                <div className="flex items-center gap-2">
+                  <span>{tool.icon} {tool.label}</span>
+                </div>
+                <span className="text-[10px] opacity-70 font-normal">{tool.file}</span>
+              </label>
+            ))}
+          </div>
+          <FieldError message={errors.buildTool?.message} />
+        </div>
+
+        {/* Config File Format Selector */}
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 dark:text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+            Config File Format
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            {([
+              { id: "yaml",       label: "YAML",       icon: "📄", file: "application.yml",        hint: "Human-readable, nested" },
+              { id: "properties", label: "Properties", icon: "📝", file: "application.properties", hint: "Classic flat-key style"  },
+            ] as { id: ConfigFormat; label: string; icon: string; file: string; hint: string }[]).map((fmt) => (
+              <button
+                key={fmt.id}
+                type="button"
+                onClick={() => {
+                  setConfigFormat(fmt.id);
+                  onChange?.({ configFormat: fmt.id });
+                }}
+                className={`flex items-start justify-between px-4 py-3 rounded-xl border cursor-pointer font-mono text-sm font-semibold transition-all text-left ${
+                  configFormat === fmt.id
+                    ? "bg-violet-50 dark:bg-violet-600/20 border-violet-500 text-violet-700 dark:text-violet-300 shadow-sm dark:shadow-[0_0_15px_rgba(139,92,246,0.2)]"
+                    : "bg-slate-100/60 dark:bg-black/30 border-slate-300 dark:border-white/10 text-slate-700 dark:text-muted-foreground hover:border-slate-400 dark:hover:border-white/20"
+                }`}
+              >
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span>{fmt.icon}</span>
+                    <span>{fmt.label}</span>
+                  </div>
+                  <div className="text-[10px] font-normal opacity-60 mt-0.5">{fmt.hint}</div>
+                </div>
+                <span className="text-[10px] opacity-60 font-normal shrink-0 ml-2 mt-0.5">{fmt.file}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Packaging Selector (Jar vs War) */}
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 dark:text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <Package className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+            Packaging
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { id: "jar" as Packaging, label: "Jar", icon: "📦", file: ".jar", hint: "Executable JAR application" },
+              { id: "war" as Packaging, label: "War", icon: "🌐", file: ".war", hint: "Traditional Servlet Container WAR" },
+            ].map((pkgOpt) => (
+              <button
+                key={pkgOpt.id}
+                type="button"
+                onClick={() => {
+                  setPackaging(pkgOpt.id);
+                  onChange?.({ packaging: pkgOpt.id });
+                }}
+                className={`flex items-start justify-between px-4 py-3 rounded-xl border cursor-pointer font-mono text-sm font-semibold transition-all text-left ${
+                  packaging === pkgOpt.id
+                    ? "bg-emerald-50 dark:bg-emerald-600/20 border-emerald-500 text-emerald-700 dark:text-emerald-300 shadow-sm dark:shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+                    : "bg-slate-100/60 dark:bg-black/30 border-slate-300 dark:border-white/10 text-slate-700 dark:text-muted-foreground hover:border-slate-400 dark:hover:border-white/20"
+                }`}
+              >
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span>{pkgOpt.icon}</span>
+                    <span>{pkgOpt.label}</span>
+                  </div>
+                  <div className="text-[10px] font-normal opacity-60 mt-0.5">{pkgOpt.hint}</div>
+                </div>
+                <span className="text-[10px] opacity-60 font-normal shrink-0 ml-2 mt-0.5">{pkgOpt.file}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Dynamic Java Version Selector (Fetched Live from Spring Initializr Metadata) */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-xs font-semibold text-slate-700 dark:text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <Coffee className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              Java Version SDK <span className="text-blue-600 dark:text-blue-400">*</span>
+            </label>
+            {isLoadingVersions && (
+              <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                <RefreshCw className="w-3 h-3 animate-spin" />
+                Syncing Initializr SDKs...
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {javaVersions.map((ver) => (
+              <label
+                key={ver.version}
+                className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border cursor-pointer font-mono text-xs font-bold transition-all ${
+                  watch("javaVersion") === ver.version
+                    ? "bg-blue-600 border-blue-500 text-white shadow-md shadow-blue-500/20"
+                    : "bg-slate-100/60 dark:bg-black/30 border-slate-300 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-slate-400 dark:hover:border-white/20"
+                }`}
+              >
+                <input
+                  type="radio"
+                  {...register("javaVersion")}
+                  value={ver.version}
+                  className="sr-only"
+                />
+                <span>Java {ver.label}</span>
+                {ver.isDefault && (
+                  <span className="text-[9px] px-1 py-0.2 rounded bg-amber-400/30 text-amber-900 dark:text-amber-300 font-semibold">
+                    LTS
+                  </span>
+                )}
               </label>
             ))}
           </div>
@@ -246,7 +394,7 @@ export function ProjectInfoStep({ data, onNext, onChange }: ProjectInfoStepProps
         </div>
       </div>
 
-      <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-white/10">
+      <div className="flex justify-end pt-4 pb-8 mb-4 border-t border-slate-200 dark:border-white/10">
         <button
           type="submit"
           className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-sm hover:brightness-110 transition-all shadow-lg glow-primary"

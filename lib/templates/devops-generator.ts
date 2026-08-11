@@ -2,14 +2,29 @@ import { GenerateRequest } from "../types";
 import { hasMongo, hasMysql, hasPostgres } from "./utils";
 
 export function generateDockerfile(req: GenerateRequest): string {
+  const isGradle = req.buildTool === "gradle";
+  const copyBuildFiles = isGradle
+    ? `COPY gradle/ gradle/
+COPY gradlew build.gradle settings.gradle ./
+RUN ./gradlew dependencies --no-daemon`
+    : `COPY .mvn/ .mvn/
+COPY mvnw pom.xml ./
+RUN ./mvnw dependency:go-offline -B`;
+
+  const buildCmd = isGradle
+    ? `RUN ./gradlew bootJar --no-daemon -x test`
+    : `RUN ./mvnw clean package -DskipTests -B`;
+
+  const jarLocation = isGradle
+    ? `/app/build/libs/*.jar`
+    : `/app/target/*.jar`;
+
   return `# ── Stage 1: Build ────────────────────────────────────────────────
 FROM eclipse-temurin:${req.javaVersion}-jdk-alpine AS builder
 WORKDIR /app
-COPY .mvn/ .mvn/
-COPY mvnw pom.xml ./
-RUN ./mvnw dependency:go-offline -B
+${copyBuildFiles}
 COPY src ./src
-RUN ./mvnw clean package -DskipTests -B
+${buildCmd}
 
 # ── Stage 2: Run ──────────────────────────────────────────────────
 FROM eclipse-temurin:${req.javaVersion}-jre-alpine AS runtime
@@ -19,7 +34,7 @@ WORKDIR /app
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser
 
-COPY --from=builder /app/target/*.jar app.jar
+COPY --from=builder ${jarLocation} app.jar
 
 EXPOSE 8080
 
@@ -202,7 +217,14 @@ export function generateGithubActionsWorkflow(req: GenerateRequest): string {
   const servicesBlock = dbService
     ? `\n    services:\n${dbService}\n` : "";
 
-  return `name: CI — Build & Test
+  const isGradle = req.buildTool === "gradle";
+  const cacheTool = isGradle ? "gradle" : "maven";
+  const buildStepName = isGradle ? "Build with Gradle" : "Build with Maven";
+  const buildStepCmd = isGradle ? "./gradlew build" : "./mvnw clean verify -B";
+  const reportPath = isGradle ? "build/reports/tests/test/" : "target/surefire-reports/";
+  const artifactPath = isGradle ? "build/libs/*.jar" : "target/*.jar";
+
+  return `name: Java CI with ${isGradle ? "Gradle" : "Maven"}
 
 on:
   push:
@@ -227,10 +249,10 @@ ${servicesBlock}
         with:
           java-version: '${req.javaVersion}'
           distribution: 'temurin'
-          cache: 'maven'
+          cache: '${cacheTool}'
 
-      - name: Build with Maven
-        run: ./mvnw clean verify -B
+      - name: ${buildStepName}
+        run: ${buildStepCmd}
 ${dbEnvVars}
 
       - name: Upload test reports
@@ -238,14 +260,14 @@ ${dbEnvVars}
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
-          path: target/surefire-reports/
+          path: ${reportPath}
 
       - name: Upload build artifact
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: application-jar
-          path: target/*.jar
+          path: ${artifactPath}
           retention-days: 5
 `;
 }

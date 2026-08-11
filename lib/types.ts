@@ -1,22 +1,21 @@
 export type Architecture = "layered" | "hexagonal" | "clean" | "modular";
+export type BuildTool = "maven" | "gradle";
+export type ConfigFormat = "yaml" | "properties";
+export type Packaging = "jar" | "war";
 
-export type DependencyId =
-  // Core
-  | "web" | "validation" | "jpa" | "lombok" | "actuator"
-  // Security
-  | "security" | "jwt" | "oauth2"
-  // Database
-  | "postgresql" | "mysql" | "mongodb"
-  // DevTools
-  | "swagger" | "docker" | "github-actions" | "flyway" | "exception-handler" | "audit-logging";
+export type DependencyCategory = "archforge" | "core" | "security" | "database" | "messaging" | "devtools";
 
 export interface DependencyDef {
-  id: DependencyId;
+  id: string;
   label: string;
   description: string;
   icon: string;
-  category: "core" | "security" | "database" | "devtools";
+  category: DependencyCategory;
   alwaysIncluded?: boolean;
+  isCodeFeature?: boolean; // True if this feature generates custom Java/YAML/Docker code
+  groupId?: string;
+  artifactId?: string;
+  version?: string;
 }
 
 export interface CustomTreeAction {
@@ -30,6 +29,9 @@ export interface GenerateRequest {
   projectName: string;
   groupId: string;
   artifactId: string;
+  buildTool?: BuildTool;
+  configFormat?: ConfigFormat;
+  packaging?: Packaging;
   javaVersion: string;
   springBootVersion: string;
   architecture: Architecture;
@@ -41,6 +43,9 @@ export interface WizardState {
   projectName: string;
   groupId: string;
   artifactId: string;
+  buildTool?: BuildTool;
+  configFormat?: ConfigFormat;
+  packaging?: Packaging;
   javaVersion: string;
   springBootVersion: string;
   architecture: Architecture;

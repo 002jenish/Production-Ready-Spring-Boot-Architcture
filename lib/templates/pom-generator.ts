@@ -1,61 +1,46 @@
 import { GenerateRequest } from "../types";
 import {
-  hasActuator, hasDocker, hasFlyway, hasGithub, hasJpa, hasJwt,
-  hasMongo, hasMysql, hasOauth2, hasPostgres, hasSecurity, hasSwagger, hasExHandler
+    hasActuator, hasFlyway, hasJpa, hasJwt,
+    hasMongo, hasMysql, hasOauth2, hasPostgres, hasSecurity, hasSwagger
 } from "./utils";
+import { resolveDependency } from "./dependency-resolver";
 
-/**
- * Normalize Spring Boot version string to Maven standard format.
- * start.spring.io returns IDs like "4.1.1-SNAPSHOT" or "3.5.3"
- * but older labels may contain ".BUILD-SNAPSHOT" or "(SNAPSHOT)".
- * 
- * Examples:
- *   "4.1.1.BUILD-SNAPSHOT"  → "4.1.1-SNAPSHOT"
- *   "4.1.1 (SNAPSHOT)"      → "4.1.1-SNAPSHOT"
- *   "4.1.1(snapshot)"       → "4.1.1-SNAPSHOT"
- *   "3.5.3"                 → "3.5.3"
- *   "3.5.3-SNAPSHOT"        → "3.5.3-SNAPSHOT"  (already correct)
- */
 function normalizeSpringVersion(raw: string): string {
-  // Remove trailing parenthetical snapshot qualifiers like " (SNAPSHOT)" or "(snapshot)"
-  let v = raw.replace(/\s*\(snapshot\)/gi, "-SNAPSHOT");
-  // Convert .BUILD-SNAPSHOT to -SNAPSHOT (legacy Spring format)
-  v = v.replace(/\.BUILD-SNAPSHOT$/i, "-SNAPSHOT");
-  // Ensure we don't double up
-  v = v.replace(/-SNAPSHOT-SNAPSHOT$/i, "-SNAPSHOT");
-  return v.trim();
+    let v = raw.replace(/\s*\(snapshot\)/gi, "-SNAPSHOT");
+    v = v.replace(/\.BUILD-SNAPSHOT$/i, "-SNAPSHOT");
+    v = v.replace(/-SNAPSHOT-SNAPSHOT$/i, "-SNAPSHOT");
+    return v.trim();
 }
 
 export function generatePomXml(req: GenerateRequest): string {
-  const springVersion = normalizeSpringVersion(req.springBootVersion);
-  const jwtBlock = hasJwt(req)
-    ? `        <jjwt.version>0.12.6</jjwt.version>\n` : "";
-  const springdocBlock = hasSwagger(req)
-    ? `        <springdoc.version>2.8.9</springdoc.version>\n` : "";
+    const springVersion = normalizeSpringVersion(req.springBootVersion);
+    const jwtBlock = hasJwt(req)
+        ? `        <jjwt.version>0.12.6</jjwt.version>\n` : "";
+    const springdocBlock = hasSwagger(req)
+        ? `        <springdoc.version>2.8.9</springdoc.version>\n` : "";
 
-
-  const jpaBlock = hasJpa(req) && !hasMongo(req) ? `
+    const jpaBlock = hasJpa(req) && !hasMongo(req) ? `
         <!-- Spring Data JPA -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>` : "";
 
-  const mongoBlock = hasMongo(req) ? `
+    const mongoBlock = hasMongo(req) ? `
         <!-- Spring Data MongoDB -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-mongodb</artifactId>
         </dependency>` : "";
 
-  const securityBlock = hasSecurity(req) ? `
+    const securityBlock = hasSecurity(req) ? `
         <!-- Spring Security -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>` : "";
 
-  const jwtLibBlock = hasJwt(req) ? `
+    const jwtLibBlock = hasJwt(req) ? `
         <!-- JWT (JJWT) -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
@@ -75,14 +60,14 @@ export function generatePomXml(req: GenerateRequest): string {
             <scope>runtime</scope>
         </dependency>` : "";
 
-  const oauth2Block = hasOauth2(req) ? `
+    const oauth2Block = hasOauth2(req) ? `
         <!-- OAuth2 Resource Server -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
         </dependency>` : "";
 
-  const postgresBlock = hasPostgres(req) ? `
+    const postgresBlock = hasPostgres(req) ? `
         <!-- PostgreSQL Driver -->
         <dependency>
             <groupId>org.postgresql</groupId>
@@ -90,7 +75,7 @@ export function generatePomXml(req: GenerateRequest): string {
             <scope>runtime</scope>
         </dependency>` : "";
 
-  const mysqlBlock = hasMysql(req) ? `
+    const mysqlBlock = hasMysql(req) ? `
         <!-- MySQL Driver -->
         <dependency>
             <groupId>com.mysql</groupId>
@@ -98,7 +83,7 @@ export function generatePomXml(req: GenerateRequest): string {
             <scope>runtime</scope>
         </dependency>` : "";
 
-  const flywayBlock = hasFlyway(req) ? `
+    const flywayBlock = hasFlyway(req) ? `
         <!-- Flyway -->
         <dependency>
             <groupId>org.flywaydb</groupId>
@@ -113,14 +98,14 @@ export function generatePomXml(req: GenerateRequest): string {
             <artifactId>flyway-mysql</artifactId>
         </dependency>` : ""}` : "";
 
-  const actuatorBlock = hasActuator(req) ? `
+    const actuatorBlock = hasActuator(req) ? `
         <!-- Actuator -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>` : "";
 
-  const swaggerBlock = hasSwagger(req) ? `
+    const swaggerBlock = hasSwagger(req) ? `
         <!-- OpenAPI / Swagger UI -->
         <dependency>
             <groupId>org.springdoc</groupId>
@@ -128,14 +113,57 @@ export function generatePomXml(req: GenerateRequest): string {
             <version>\${springdoc.version}</version>
         </dependency>` : "";
 
-  const securityTestBlock = hasSecurity(req) ? `
+    const securityTestBlock = hasSecurity(req) ? `
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>` : "";
 
-  return `<?xml version="1.0" encoding="UTF-8"?>
+    // Set of artifacts already included in explicit blocks above to prevent duplicates
+    const seenArtifacts = new Set<string>([
+        "spring-boot-starter-web",
+        "spring-boot-starter-validation",
+        "lombok",
+        "spring-boot-starter-test",
+        ...(hasJpa(req) && !hasMongo(req) ? ["spring-boot-starter-data-jpa"] : []),
+        ...(hasMongo(req) ? ["spring-boot-starter-data-mongodb"] : []),
+        ...(hasSecurity(req) ? ["spring-boot-starter-security", "spring-security-test"] : []),
+        ...(hasJwt(req) ? ["jjwt-api", "jjwt-impl", "jjwt-jackson"] : []),
+        ...(hasOauth2(req) ? ["spring-boot-starter-oauth2-resource-server"] : []),
+        ...(hasPostgres(req) ? ["postgresql", "flyway-database-postgresql"] : []),
+        ...(hasMysql(req) ? ["mysql-connector-j", "flyway-mysql"] : []),
+        ...(hasFlyway(req) ? ["flyway-core"] : []),
+        ...(hasActuator(req) ? ["spring-boot-starter-actuator"] : []),
+        ...(hasSwagger(req) ? ["springdoc-openapi-starter-webmvc-ui"] : []),
+        // Pure code feature flags
+        "exception-handler", "audit-logging", "docker", "github-actions"
+    ]);
+
+    // Dynamic extra dependencies mapper
+    const extraDepsLines: string[] = [];
+    for (const depId of (req.dependencies || [])) {
+        const resolved = resolveDependency(depId);
+        if (!resolved) continue;
+
+        if (seenArtifacts.has(resolved.artifactId)) continue;
+        seenArtifacts.add(resolved.artifactId);
+
+        const comment = resolved.comment ? `\n        <!-- ${resolved.comment} -->` : "";
+        const versionTag = resolved.version ? `\n            <version>${resolved.version}</version>` : "";
+        const scopeTag = resolved.scope ? `\n            <scope>${resolved.scope}</scope>` : "";
+        const optionalTag = resolved.optional ? `\n            <optional>true</optional>` : "";
+
+        extraDepsLines.push(`${comment}
+        <dependency>
+            <groupId>${resolved.groupId}</groupId>
+            <artifactId>${resolved.artifactId}</artifactId>${versionTag}${scopeTag}${optionalTag}
+        </dependency>`);
+    }
+
+    const extraDeps = extraDepsLines.join("");
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
@@ -175,19 +203,11 @@ ${jwtBlock}${springdocBlock}    </properties>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
-${jpaBlock}${mongoBlock}${securityBlock}${jwtLibBlock}${oauth2Block}${postgresBlock}${mysqlBlock}${flywayBlock}${actuatorBlock}${swaggerBlock}
+${jpaBlock}${mongoBlock}${securityBlock}${jwtLibBlock}${oauth2Block}${postgresBlock}${mysqlBlock}${flywayBlock}${actuatorBlock}${swaggerBlock}${extraDeps}
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <optional>true</optional>
-        </dependency>
-
-        <!-- Dev Tools -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-devtools</artifactId>
-            <scope>runtime</scope>
             <optional>true</optional>
         </dependency>
 
@@ -200,6 +220,8 @@ ${jpaBlock}${mongoBlock}${securityBlock}${jwtLibBlock}${oauth2Block}${postgresBl
     </dependencies>
 
     <build>
+        // <sourceDirectory>src/main/java</sourceDirectory>
+        // <testSourceDirectory>src/test/java</testSourceDirectory>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
@@ -213,19 +235,8 @@ ${jpaBlock}${mongoBlock}${securityBlock}${jwtLibBlock}${oauth2Block}${postgresBl
                     </excludes>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                        </path>
-                    </annotationProcessorPaths>
-                </configuration>
-            </plugin>
         </plugins>
     </build>
-</project>`;
+</project>
+`;
 }

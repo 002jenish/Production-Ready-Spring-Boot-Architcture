@@ -20,9 +20,9 @@ export const projectInfoSchema = z.object({
     .string()
     .min(1, "Artifact ID is required")
     .regex(/^[a-z][a-z0-9\-]*$/, "Must be lowercase letters, digits or hyphens"),
-  javaVersion: z.string().refine((v) => ["17", "21"].includes(v), {
-    message: "Select a Java version",
-  }),
+  buildTool: z.enum(["maven", "gradle"]),
+  packaging: z.enum(["jar", "war"]).optional(),
+  javaVersion: z.string().min(1, "Select a Java version"),
   springBootVersion: z.string().min(1, "Select a Spring Boot version"),
 });
 
