@@ -154,15 +154,9 @@ export default function GeneratePage() {
   const progress = Math.round((completedSteps.length / 3) * 100);
 
   return (
-    <div className="h-screen h-[100dvh] max-h-screen bg-slate-50 dark:bg-mesh text-foreground flex flex-col relative overflow-hidden">
-      {/* Background ambient blobs */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden>
-        <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full bg-blue-500/10 dark:bg-blue-600/15 blur-[120px]" />
-        <div className="absolute top-1/3 -right-32 w-[550px] h-[550px] rounded-full bg-indigo-500/10 dark:bg-violet-600/15 blur-[140px]" />
-      </div>
-
+    <div className="h-screen h-[100dvh] max-h-screen bg-mesh text-foreground flex flex-col relative overflow-hidden">
       {/* Top Navigation Bar */}
-      <header className="h-16 glass-panel bg-white/85 dark:bg-slate-900/80 border-b border-slate-200/90 dark:border-white/10 flex items-center justify-between px-6 shrink-0 z-30 shadow-sm">
+      <header className="h-16 glass-panel border-b border-slate-200 dark:border-white/10 flex items-center justify-between px-6 shrink-0 z-30">
         <div className="flex items-center gap-4">
           <Link
             href="/"
@@ -346,8 +340,8 @@ export default function GeneratePage() {
           </div>
         </main>
 
-        {/* Column 3: Right Live Preview Panel */}
-        <aside className="hidden xl:flex xl:w-[380px] 2xl:w-[440px] shrink-0 p-6 border-l border-slate-200/90 dark:border-white/10 bg-slate-100/70 dark:bg-slate-950/50 flex-col h-full overflow-hidden">
+        {/* Column 3: Right Live Preview Panel (Pinned to Right Edge - No Empty Dead Space) */}
+        <aside className="hidden xl:flex xl:w-[380px] 2xl:w-[440px] shrink-0 p-6 border-l border-white/10 bg-black/20 flex-col h-full overflow-hidden">
           <FolderPreview
             state={wizardState}
             currentStep={step}
