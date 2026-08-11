@@ -335,7 +335,7 @@ function renderHighlightedLine(line: string, isGradle: boolean): React.ReactNode
 }
 
 // IDE Code Preview Container Component
-function CodePreviewContainer({ code, lang }: { code: string; lang: "xml" | "gradle" | "yaml" | "properties" | "java" }) {
+export function CodePreviewContainer({ code, lang }: { code: string; lang: "xml" | "gradle" | "yaml" | "properties" | "java" }) {
   const lines = useMemo(() => code.split("\n"), [code]);
   const isGradle = lang === "gradle";
 

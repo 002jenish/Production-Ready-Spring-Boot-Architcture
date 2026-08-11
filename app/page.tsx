@@ -538,6 +538,112 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ── SEO FAQ Section (Google Rich Snippets) ── */}
+      <section id="faq" className="py-16 sm:py-24 px-4 sm:px-6 max-w-4xl mx-auto relative z-10">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              mainEntity: [
+                {
+                  "@type": "Question",
+                  name: "What is ArchForge and how is it different from Spring Initializr?",
+                  acceptedAnswer: {
+                    "@type": "Answer",
+                    text: "ArchForge is an advanced visual Spring Boot architecture generator. Unlike standard Spring Initializr which only creates a flat starter project, ArchForge allows you to visually choose architectural patterns (Layered, Hexagonal Ports & Adapters, Clean Architecture, or Modular Monolith), pick 200+ live verified starters, and select YAML or Properties format with pre-configured JWT security, Flyway migrations, and Docker.",
+                  },
+                },
+                {
+                  "@type": "Question",
+                  name: "Can I generate a standalone pom.xml or build.gradle without downloading a ZIP?",
+                  acceptedAnswer: {
+                    "@type": "Answer",
+                    text: "Yes! ArchForge features a dedicated Build File Generator page (/generate-pom) that lets you generate production-grade Maven pom.xml or Gradle build.gradle files online with live Maven Central coordinates, copyable directly into your editor.",
+                  },
+                },
+                {
+                  "@type": "Question",
+                  name: "Which Spring Boot versions and Java SDKs are supported?",
+                  acceptedAnswer: {
+                    "@type": "Answer",
+                    text: "ArchForge dynamically synchronizes with official Spring Initializr metadata to support Spring Boot 3.5+, 3.4+, and 3.3 GA releases alongside Java 21 LTS, Java 23, Java 25, and Java 17.",
+                  },
+                },
+                {
+                  "@type": "Question",
+                  name: "Can I choose between application.yml and application.properties?",
+                  acceptedAnswer: {
+                    "@type": "Answer",
+                    text: "Yes. In the project setup step, you can switch between YAML (application.yml) and classic flat-key style (application.properties). All multi-profile dev/prod database and security configs update in real-time.",
+                  },
+                },
+                {
+                  "@type": "Question",
+                  name: "Is the generated Spring Boot code compilable out of the box?",
+                  acceptedAnswer: {
+                    "@type": "Answer",
+                    text: "100%. Every generated ZIP project includes Maven or Gradle wrappers, sanitized dependencies with BOM-managed versions, source sets, and unit tests so you can unzip and run ./mvnw spring-boot:run or ./gradlew bootRun immediately without manual dependency troubleshooting.",
+                  },
+                },
+              ],
+            }),
+          }}
+        />
+
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold glass-panel border border-blue-500/30 text-blue-400 mb-3">
+            <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+            Frequently Asked Questions
+          </div>
+          <h2 className="text-2xl sm:text-4xl font-extrabold mb-3">Everything You Need to Know</h2>
+          <p className="text-muted-foreground text-sm max-w-lg mx-auto">
+            Learn why backend developers use ArchForge as their primary Spring Boot architecture builder.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          {[
+            {
+              q: "What is ArchForge and how is it different from Spring Initializr?",
+              a: "ArchForge is an advanced visual Spring Boot architecture generator. Unlike standard Spring Initializr which creates a basic flat structure, ArchForge lets you choose architectural patterns (Layered, Hexagonal, Clean, or Modular Monolith), pick 200+ live starters, and choose between YAML or Properties format with pre-built JWT security, Flyway migrations, and Docker.",
+            },
+            {
+              q: "Can I generate a standalone pom.xml or build.gradle without downloading a ZIP?",
+              a: "Yes! Use our dedicated Build File Generator (/generate-pom) to configure dependencies and generate clean, valid Maven pom.xml or Gradle build.gradle code instantly without generating full project folders.",
+            },
+            {
+              q: "Which Spring Boot versions and Java SDKs are supported?",
+              a: "ArchForge fetches live metadata from start.spring.io to support the latest Spring Boot 3.5+, 3.4+, and 3.3 GA releases alongside Java 21 LTS, Java 23, Java 25, and Java 17.",
+            },
+            {
+              q: "Can I choose between application.yml and application.properties?",
+              a: "Yes. In the setup step, switch between YAML (application.yml) and Properties (application.properties). All multi-profile dev/prod database and security configs adapt automatically.",
+            },
+            {
+              q: "Is the generated Spring Boot code compilable out of the box?",
+              a: "100%. Every generated ZIP contains Maven/Gradle wrappers, sanitized dependency coordinates, and unit tests so you can unzip and run immediately without dependency resolution errors.",
+            },
+          ].map((item, idx) => (
+            <details
+              key={idx}
+              className="group glass-panel rounded-2xl border border-slate-200 dark:border-white/10 p-5 transition-all cursor-pointer [&_summary::-webkit-details-marker]:hidden"
+            >
+              <summary className="flex items-center justify-between font-bold text-sm sm:text-base text-slate-900 dark:text-white select-none">
+                <span>{item.q}</span>
+                <span className="ml-3 flex-shrink-0 transition-transform group-open:rotate-180 text-blue-500 font-mono">
+                  ▼
+                </span>
+              </summary>
+              <p className="mt-3 text-xs sm:text-sm text-muted-foreground leading-relaxed font-normal border-t border-slate-200/60 dark:border-white/5 pt-3">
+                {item.a}
+              </p>
+            </details>
+          ))}
+        </div>
+      </section>
+
       {/* ── CTA Banner ── */}
       <section className="py-16 sm:py-24 px-4 sm:px-6 max-w-4xl mx-auto text-center relative z-10">
         <motion.div
