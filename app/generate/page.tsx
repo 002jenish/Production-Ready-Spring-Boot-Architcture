@@ -154,10 +154,10 @@ export default function GeneratePage() {
   const progress = Math.round((completedSteps.length / 3) * 100);
 
   return (
-    <div className="h-screen h-[100dvh] max-h-screen bg-mesh text-foreground flex flex-col relative overflow-hidden">
+    <div className="min-h-screen lg:h-screen lg:h-[100dvh] lg:max-h-screen bg-mesh text-foreground flex flex-col relative overflow-y-auto lg:overflow-hidden">
       {/* Top Navigation Bar */}
-      <header className="h-16 glass-panel border-b border-slate-200 dark:border-white/10 flex items-center justify-between px-6 shrink-0 z-30">
-        <div className="flex items-center gap-4">
+      <header className="h-16 glass-panel border-b border-slate-200 dark:border-white/10 flex items-center justify-between px-4 sm:px-6 shrink-0 z-30">
+        <div className="flex items-center gap-3 sm:gap-4">
           <Link
             href="/"
             className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-muted-foreground hover:text-slate-900 dark:hover:text-foreground transition-colors"
@@ -172,7 +172,7 @@ export default function GeneratePage() {
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white text-xs font-black shadow">
               AF
             </div>
-            <span className="font-extrabold text-sm tracking-tight gradient-text">
+            <span className="font-extrabold text-xs sm:text-sm tracking-tight gradient-text">
               Project Generator
             </span>
           </div>
@@ -201,11 +201,11 @@ export default function GeneratePage() {
         </div>
 
         {/* Right Actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Copy CLI / cURL Command Button */}
           <button
             onClick={handleCopyCurl}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-panel text-xs font-mono font-semibold text-slate-700 dark:text-foreground hover:bg-slate-200/60 dark:hover:bg-white/5 transition-all border border-slate-300 dark:border-white/10"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl glass-panel text-xs font-mono font-semibold text-slate-700 dark:text-foreground hover:bg-slate-200/60 dark:hover:bg-white/5 transition-all border border-slate-300 dark:border-white/10"
             title="Copy cURL command for terminal download"
           >
             {copiedCurl ? (
@@ -216,7 +216,7 @@ export default function GeneratePage() {
             ) : (
               <>
                 <Terminal className="w-3.5 h-3.5 text-blue-500 dark:text-cyan-400" />
-                <span>cURL</span>
+                <span className="hidden sm:inline">cURL</span>
               </>
             )}
           </button>
@@ -224,10 +224,10 @@ export default function GeneratePage() {
           {/* Mobile Preview Toggle */}
           <button
             onClick={() => setShowMobilePreview(true)}
-            className="xl:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-panel text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-white transition-colors border border-blue-500/30"
+            className="xl:hidden flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl glass-panel text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-white transition-colors border border-blue-500/30"
           >
             <Eye className="w-3.5 h-3.5" />
-            <span>Tree Preview</span>
+            <span className="hidden sm:inline">Tree Preview</span>
           </button>
 
           <button
@@ -246,8 +246,40 @@ export default function GeneratePage() {
         </div>
       </header>
 
+      {/* Mobile Step Header (lg:hidden) */}
+      <div className="lg:hidden p-2.5 bg-slate-200/80 dark:bg-black/40 border-b border-slate-300 dark:border-white/10 flex items-center justify-between px-4 shrink-0">
+        <div className="flex items-center gap-1.5">
+          {STEPS.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => setStep(s.id)}
+              className={cn(
+                "flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all",
+                step === s.id
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : completedSteps.includes(s.id)
+                  ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                  : "bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400"
+              )}
+            >
+              <span>{s.icon}</span>
+              <span className="hidden sm:inline">{s.label}</span>
+              <span className="sm:hidden">Step {s.id}</span>
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={() => setShowMobilePreview(true)}
+          className="flex items-center gap-1 text-xs font-mono font-bold text-blue-600 dark:text-cyan-400 px-2 py-1 rounded-lg bg-blue-500/10 border border-blue-500/30"
+        >
+          <Eye className="w-3.5 h-3.5" />
+          <span>Tree</span>
+        </button>
+      </div>
+
       {/* Main 3-Column Layout */}
-      <div className="flex flex-1 overflow-hidden relative z-10">
+      <div className="flex flex-col lg:flex-row flex-1 overflow-y-auto lg:overflow-hidden relative z-10">
         {/* Column 1: Step Sidebar (Left Edge) */}
         <StepSidebar
           steps={STEPS}
@@ -387,6 +419,16 @@ export default function GeneratePage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Floating Mobile Tree Preview Trigger Button */}
+      <button
+        onClick={() => setShowMobilePreview(true)}
+        className="xl:hidden fixed bottom-5 right-5 z-40 p-3 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-2xl glow-primary flex items-center gap-2 border border-blue-400/40 text-xs font-mono font-bold hover:scale-105 transition-transform"
+        aria-label="Open Live Tree Preview"
+      >
+        <Eye className="w-4 h-4" />
+        <span className="pr-1">Tree Preview</span>
+      </button>
     </div>
   );
 }

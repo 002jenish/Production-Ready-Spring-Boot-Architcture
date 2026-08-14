@@ -375,9 +375,9 @@ export function CodePreviewContainer({ code, lang }: { code: string; lang: "xml"
   }
 
   return (
-    <div className="flex-1 h-0 overflow-auto bg-[#080d1a] text-slate-100 font-mono text-[11px] leading-relaxed relative flex select-text">
-      {/* Line Numbers Gutter */}
-      <div className="py-3 px-2 bg-[#0e1526] border-r border-slate-800/80 select-none text-right shrink-0 text-slate-500 font-mono text-[10px] min-w-[36px]">
+    <div className="flex-1 h-0 overflow-auto bg-[#080d1a] text-slate-100 font-mono text-[11px] leading-relaxed relative flex select-text custom-scrollbar">
+      {/* Line Numbers Gutter (Sticky on left) */}
+      <div className="sticky left-0 py-3 px-2 bg-[#0e1526] border-r border-slate-800/80 select-none text-right shrink-0 text-slate-500 font-mono text-[10px] min-w-[36px] z-10">
         {lines.map((_, i) => (
           <div key={i} className="h-5 flex items-center justify-end pr-1">
             {i + 1}
@@ -385,10 +385,10 @@ export function CodePreviewContainer({ code, lang }: { code: string; lang: "xml"
         ))}
       </div>
 
-      {/* Code Area with Horizontal Scroll */}
-      <div className="p-3 flex-1 overflow-x-auto whitespace-pre font-mono text-[11px] leading-relaxed">
+      {/* Code Area */}
+      <div className="p-3 min-w-0 flex-1 whitespace-pre font-mono text-[11px] leading-relaxed">
         {lines.map((line, i) => (
-          <div key={i} className="h-5 flex items-center hover:bg-blue-500/10 px-1 rounded transition-colors">
+          <div key={i} className="h-5 flex items-center hover:bg-blue-500/10 px-1 rounded transition-colors w-max min-w-full">
             {renderLine(line)}
           </div>
         ))}
@@ -729,10 +729,10 @@ function TreeNodeRenderer({
   const isAdding = addingToPath === node.path;
 
   return (
-    <div style={{ paddingLeft: depth > 0 ? `${depth * 10}px` : 0 }}>
+    <div style={{ paddingLeft: depth > 0 ? `${Math.min(depth * 8, 48)}px` : 0 }}>
       {/* Current Node Row */}
       <div className="group flex items-center justify-between py-1 px-1.5 rounded hover:bg-slate-200/60 dark:hover:bg-white/5 transition-colors">
-        <div className="flex items-center gap-1.5 text-[11px] font-mono truncate min-w-0">
+        <div className="flex items-center gap-1.5 text-[11px] font-mono truncate min-w-0 flex-1 pr-1">
           {node.type === "folder" ? (
             <Folder className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
           ) : (
@@ -776,15 +776,15 @@ function TreeNodeRenderer({
           )}
 
           {node.custom && (
-            <span className="text-[9px] font-mono px-1 rounded bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/40 font-medium">
+            <span className="text-[9px] font-mono px-1 rounded bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/40 font-medium shrink-0">
               Custom
             </span>
           )}
         </div>
 
-        {/* Hover Action Buttons */}
+        {/* Action Buttons: Always visible on mobile/touch screens (opacity-100), hover-only on sm/desktop */}
         {!isRenaming && (
-          <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 shrink-0 transition-opacity">
+          <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex items-center gap-1 shrink-0 transition-opacity bg-slate-100/90 dark:bg-slate-900/90 sm:bg-transparent px-1 rounded">
             {node.type === "folder" && (
               <>
                 <button

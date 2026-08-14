@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import {
-  Home, Sparkles, Download, Copy, Check, Terminal, FileCode,
+  Home, Sparkles, Download, Copy, Check, Terminal, FileCode, Code2,
   Search, X, Lock, Plus, Boxes, RefreshCw, Moon, Sun, Layers
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -29,6 +29,7 @@ const CATEGORY_META: Record<string, { label: string; badge: string }> = {
 const ALWAYS_INCLUDED = ["web", "lombok"];
 
 export default function PomGeneratorPage() {
+  const [mobileTab, setMobileTab] = useState<"form" | "code">("form");
   const [config, setConfig] = useState<WizardState>({
     projectName: "demo-service",
     groupId: "com.example",
@@ -179,24 +180,33 @@ export default function PomGeneratorPage() {
     setTimeout(() => setCopiedCurl(false), 2500);
   }, [config, fileName]);
 
-  const filteredDependencies = useMemo(() => {
-    return allDependencies.filter((dep) => {
+  const { selectedDeps, availableDeps } = useMemo(() => {
+    const filtered = allDependencies.filter((dep) => {
       const matchesCategory = selectedCategory === "all" || dep.category === selectedCategory;
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
         !q ||
         dep.label.toLowerCase().includes(q) ||
         dep.description.toLowerCase().includes(q) ||
-        dep.id.toLowerCase().includes(q);
+        dep.id.toLowerCase().includes(q) ||
+        (dep.category && dep.category.toLowerCase().includes(q));
       return matchesCategory && matchesSearch;
     });
-  }, [allDependencies, selectedCategory, searchQuery]);
+
+    const sel: typeof filtered = [];
+    const avail: typeof filtered = [];
+    for (const dep of filtered) {
+      if (selectedSet.has(dep.id)) sel.push(dep);
+      else avail.push(dep);
+    }
+    return { selectedDeps: sel, availableDeps: avail };
+  }, [allDependencies, selectedCategory, searchQuery, selectedSet]);
 
   return (
-    <div className="h-screen h-[100dvh] max-h-screen bg-mesh text-foreground flex flex-col relative overflow-hidden">
+    <div className="min-h-screen lg:h-screen lg:h-[100dvh] lg:max-h-screen bg-mesh text-foreground flex flex-col relative overflow-y-auto lg:overflow-hidden">
       {/* Navigation Header */}
-      <header className="h-16 glass-panel border-b border-slate-200 dark:border-white/10 flex items-center justify-between px-6 shrink-0 z-30">
-        <div className="flex items-center gap-4">
+      <header className="h-16 glass-panel border-b border-slate-200 dark:border-white/10 flex items-center justify-between px-4 sm:px-6 shrink-0 z-30">
+        <div className="flex items-center gap-3 sm:gap-4">
           <Link
             href="/"
             className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-muted-foreground hover:text-slate-900 dark:hover:text-foreground transition-colors"
@@ -211,7 +221,7 @@ export default function PomGeneratorPage() {
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-xs font-black shadow">
               <FileCode className="w-4 h-4" />
             </div>
-            <span className="font-extrabold text-sm tracking-tight gradient-text">
+            <span className="font-extrabold text-xs sm:text-sm tracking-tight gradient-text">
               pom.xml Generator
             </span>
           </div>
@@ -227,10 +237,10 @@ export default function PomGeneratorPage() {
         </div>
 
         {/* Right Header Actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={handleCopyCurl}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-panel text-xs font-mono font-semibold text-slate-700 dark:text-foreground hover:bg-slate-200/60 dark:hover:bg-white/5 transition-all border border-slate-300 dark:border-white/10"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl glass-panel text-xs font-mono font-semibold text-slate-700 dark:text-foreground hover:bg-slate-200/60 dark:hover:bg-white/5 transition-all border border-slate-300 dark:border-white/10"
             title="Copy cURL command for terminal download"
           >
             <Terminal className="w-3.5 h-3.5 text-emerald-400" />
@@ -251,10 +261,41 @@ export default function PomGeneratorPage() {
         </div>
       </header>
 
-      {/* Main Workspace (2-Column split: Form/Selector left, Live Preview right) */}
-      <div className="flex-1 flex overflow-hidden">
+      {/* Mobile View Mode Switcher (lg:hidden) */}
+      <div className="lg:hidden p-2 bg-slate-200/80 dark:bg-black/40 border-b border-slate-300 dark:border-white/10 flex items-center justify-center gap-2 shrink-0">
+        <button
+          onClick={() => setMobileTab("form")}
+          className={cn(
+            "flex-1 py-1.5 px-3 rounded-lg text-xs font-bold font-mono transition-all flex items-center justify-center gap-1.5",
+            mobileTab === "form"
+              ? "bg-blue-600 text-white shadow-sm"
+              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+          )}
+        >
+          <FileCode className="w-3.5 h-3.5" />
+          <span>Config & Starters</span>
+        </button>
+        <button
+          onClick={() => setMobileTab("code")}
+          className={cn(
+            "flex-1 py-1.5 px-3 rounded-lg text-xs font-bold font-mono transition-all flex items-center justify-center gap-1.5",
+            mobileTab === "code"
+              ? "bg-emerald-600 text-white shadow-sm"
+              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+          )}
+        >
+          <Code2 className="w-3.5 h-3.5" />
+          <span>Live {fileName} Code</span>
+        </button>
+      </div>
+
+      {/* Main Workspace (2-Column split on lg: desktop, tabbed/stacked on mobile) */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
         {/* Left Column: Form & Dependencies */}
-        <main className="flex-1 p-6 overflow-y-auto custom-scrollbar flex flex-col space-y-6">
+        <main className={cn(
+          "flex-1 p-4 sm:p-6 overflow-y-auto custom-scrollbar flex-col space-y-6",
+          mobileTab === "form" ? "flex" : "hidden lg:flex"
+        )}>
           {/* Metadata Bar */}
           <div className="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-white/10 space-y-4 shadow-sm">
             <div className="flex items-center justify-between">
@@ -451,51 +492,131 @@ export default function PomGeneratorPage() {
             </div>
 
             {/* Dependency Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-[380px] overflow-y-auto custom-scrollbar p-1">
-              {filteredDependencies.map((dep) => {
-                const isChecked = selectedSet.has(dep.id);
-                return (
-                  <div
-                    key={dep.id}
-                    onClick={() => toggleDependency(dep.id)}
-                    className={cn(
-                      "p-3 rounded-xl border transition-all cursor-pointer flex items-start justify-between gap-2",
-                      isChecked
-                        ? "bg-blue-500/10 border-blue-500/50 shadow-sm"
-                        : "bg-white/50 dark:bg-white/5 border-slate-200 dark:border-white/10 hover:border-slate-400 dark:hover:border-white/20"
-                    )}
-                  >
-                    <div className="flex items-start gap-2 min-w-0">
-                      <span className="text-base shrink-0">{dep.icon}</span>
-                      <div className="min-w-0">
-                        <div className="font-bold text-xs truncate text-slate-900 dark:text-white">{dep.label}</div>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">{dep.description}</p>
+            <div className="max-h-[380px] overflow-y-auto custom-scrollbar p-1">
+              {selectedDeps.length === 0 && availableDeps.length === 0 ? (
+                <div className="text-center py-8 text-slate-500 dark:text-muted-foreground glass-panel rounded-2xl p-6 border border-slate-200 dark:border-white/10">
+                  <Boxes className="w-8 h-8 mx-auto mb-2 opacity-50 text-blue-500" />
+                  <p className="font-bold text-sm">No dependencies found matching "{searchQuery}"</p>
+                  <p className="text-xs mt-1">Try searching for a different keyword or add a custom starter above.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* ── Selected section ── */}
+                  {selectedDeps.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
+                          ✅ Selected ({selectedDeps.length})
+                        </span>
+                        <div className="flex-1 h-px bg-emerald-500/30" />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                        {selectedDeps.map((dep) => {
+                          const isChecked = selectedSet.has(dep.id);
+                          return (
+                            <div
+                              key={dep.id}
+                              onClick={() => toggleDependency(dep.id)}
+                              className={cn(
+                                "p-3 rounded-xl border transition-all cursor-pointer flex items-start justify-between gap-2",
+                                isChecked
+                                  ? "bg-blue-500/10 border-blue-500/50 shadow-sm"
+                                  : "bg-white/50 dark:bg-white/5 border-slate-200 dark:border-white/10 hover:border-slate-400 dark:hover:border-white/20"
+                              )}
+                            >
+                              <div className="flex items-start gap-2 min-w-0">
+                                <span className="text-base shrink-0">{dep.icon}</span>
+                                <div className="min-w-0">
+                                  <div className="font-bold text-xs truncate text-slate-900 dark:text-white">{dep.label}</div>
+                                  <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">{dep.description}</p>
+                                </div>
+                              </div>
+
+                              <div className="shrink-0 mt-0.5">
+                                {dep.alwaysIncluded ? (
+                                  <Lock className="w-3.5 h-3.5 text-slate-400" />
+                                ) : (
+                                  <div
+                                    className={cn(
+                                      "w-4 h-4 rounded border flex items-center justify-center transition-all",
+                                      isChecked ? "bg-blue-600 border-blue-500 text-white" : "border-slate-300 dark:border-white/20"
+                                    )}
+                                  >
+                                    {isChecked && <Check className="w-2.5 h-2.5" />}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
+                  )}
 
-                    <div className="shrink-0 mt-0.5">
-                      {dep.alwaysIncluded ? (
-                        <Lock className="w-3.5 h-3.5 text-slate-400" />
-                      ) : (
-                        <div
-                          className={cn(
-                            "w-4 h-4 rounded border flex items-center justify-center transition-all",
-                            isChecked ? "bg-blue-600 border-blue-500 text-white" : "border-slate-300 dark:border-white/20"
-                          )}
-                        >
-                          {isChecked && <Check className="w-2.5 h-2.5" />}
+                  {/* ── Available section ── */}
+                  {availableDeps.length > 0 && (
+                    <div className="space-y-2">
+                      {selectedDeps.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                            Available ({availableDeps.length})
+                          </span>
+                          <div className="flex-1 h-px bg-slate-200 dark:bg-white/10" />
                         </div>
                       )}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                        {availableDeps.map((dep) => {
+                          const isChecked = selectedSet.has(dep.id);
+                          return (
+                            <div
+                              key={dep.id}
+                              onClick={() => toggleDependency(dep.id)}
+                              className={cn(
+                                "p-3 rounded-xl border transition-all cursor-pointer flex items-start justify-between gap-2",
+                                isChecked
+                                  ? "bg-blue-500/10 border-blue-500/50 shadow-sm"
+                                  : "bg-white/50 dark:bg-white/5 border-slate-200 dark:border-white/10 hover:border-slate-400 dark:hover:border-white/20"
+                              )}
+                            >
+                              <div className="flex items-start gap-2 min-w-0">
+                                <span className="text-base shrink-0">{dep.icon}</span>
+                                <div className="min-w-0">
+                                  <div className="font-bold text-xs truncate text-slate-900 dark:text-white">{dep.label}</div>
+                                  <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">{dep.description}</p>
+                                </div>
+                              </div>
+
+                              <div className="shrink-0 mt-0.5">
+                                {dep.alwaysIncluded ? (
+                                  <Lock className="w-3.5 h-3.5 text-slate-400" />
+                                ) : (
+                                  <div
+                                    className={cn(
+                                      "w-4 h-4 rounded border flex items-center justify-center transition-all",
+                                      isChecked ? "bg-blue-600 border-blue-500 text-white" : "border-slate-300 dark:border-white/20"
+                                    )}
+                                  >
+                                    {isChecked && <Check className="w-2.5 h-2.5" />}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </main>
 
         {/* Right Column: Code Preview Panel */}
-        <aside className="w-[450px] xl:w-[520px] shrink-0 p-6 border-l border-slate-200 dark:border-white/10 bg-slate-100/60 dark:bg-slate-900/50 flex flex-col h-full overflow-hidden">
+        <aside className={cn(
+          "w-full lg:w-[420px] xl:w-[520px] shrink-0 p-4 sm:p-6 border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-white/10 bg-slate-100/60 dark:bg-slate-900/50 flex-col min-h-[450px] lg:h-full overflow-hidden",
+          mobileTab === "code" ? "flex" : "hidden lg:flex"
+        )}>
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
               <FileCode className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
